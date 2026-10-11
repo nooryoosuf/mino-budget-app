@@ -2,9 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
-  // GitHub Pages serves project sites under /<repo>/ — set PAGES_BASE=/<repo>/ in the deploy workflow.
-  base: process.env.PAGES_BASE ?? '/',
+export default defineConfig(({ mode }) => ({
+  // GitHub Pages serves project sites under /<repo>/ — the deploy workflow builds with --mode pages.
+  base: mode === 'pages' ? '/ruh-maldives-money/' : '/',
   plugins: [react(), tailwindcss()],
   build: {
     chunkSizeWarningLimit: 600,
