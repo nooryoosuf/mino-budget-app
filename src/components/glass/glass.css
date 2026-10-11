@@ -1,0 +1,139 @@
+/**
+ * Ruh Liquid Glass material.
+ * Technique (as documented by nikdelvin/liquid-glass, MIT — reimplemented here
+ * as dependency-free React + CSS so it fits our Vite/Tailwind v4 stack):
+ * real background refraction via `backdrop-filter: url(#ruh-lg)` where an
+ * inline SVG feTurbulence + feDisplacementMap filter bends the backdrop,
+ * layered with specular highlights and edge light in pure CSS.
+ *
+ * Fallback: the frosted declaration comes FIRST, so browsers that drop
+ * `url()` in backdrop-filter (older Safari/Firefox) keep clean frosted glass.
+ * No JS listeners, no animation loops — hover/press are CSS transitions.
+ */
+
+.lg {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  /* 1 — universal frosted fallback */
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  /* 2 — true liquid refraction where supported (unsupported UAs drop this line) */
+  -webkit-backdrop-filter: blur(1.5px) url(#ruh-lg) saturate(1.8) brightness(1.05);
+  backdrop-filter: blur(1.5px) url(#ruh-lg) saturate(1.8) brightness(1.05);
+  background: color-mix(in srgb, #ffffff 16%, transparent);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.45),
+    inset 0 1px 1px rgb(255 255 255 / 0.5),
+    inset 0 -1px 2px rgb(120 60 0 / 0.08),
+    0 10px 26px -14px rgb(120 60 0 / 0.22);
+}
+
+/* softer refraction for large surfaces (tab bar, toolbars) */
+.lg-soft {
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(2px) url(#ruh-lg-soft) saturate(1.7) brightness(1.04);
+  backdrop-filter: blur(2px) url(#ruh-lg-soft) saturate(1.7) brightness(1.04);
+}
+
+/* specular sweep — light catching the top edge of the glass */
+.lg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(255 255 255 / 0.5), transparent 55%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.22), transparent 30%);
+}
+
+/* variants */
+.lg-clear {
+  background: color-mix(in srgb, #ffffff 8%, transparent);
+}
+.lg-tinted {
+  background: color-mix(in srgb, var(--accent) 55%, rgb(255 255 255 / 20%));
+}
+.lg-tinted::before {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(255 255 255 / 0.65), transparent 55%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.25), transparent 32%);
+}
+
+.dark .lg {
+  background: color-mix(in srgb, #ffffff 8%, transparent);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.16),
+    inset 0 1px 1px rgb(255 255 255 / 0.14),
+    inset 0 -1px 2px rgb(0 0 0 / 0.3),
+    0 14px 30px -14px rgb(0 0 0 / 0.65);
+}
+.dark .lg::before {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(255 255 255 / 0.16), transparent 55%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 32%);
+}
+.dark .lg-clear {
+  background: color-mix(in srgb, #ffffff 5%, transparent);
+}
+.dark .lg-tinted {
+  background: color-mix(in srgb, var(--accent) 60%, rgb(0 0 0 / 25%));
+}
+
+/* content floats above the specular layer */
+.lg-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  line-height: 0;
+}
+.lg-content svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* interaction: gentle lift on hover, elastic press */
+.lg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.18s ease,
+    background-color 0.2s ease;
+  cursor: pointer;
+}
+.lg-btn:hover {
+  filter: brightness(1.07);
+}
+/* lift only where a real hover exists — on touch, sticky :hover would leave
+   tapped buttons sitting 1px high and the row looking misaligned */
+@media (hover: hover) and (pointer: fine) {
+  .lg-btn:hover {
+    transform: translateY(-1px);
+  }
+}
+.lg-btn:active {
+  transform: translateY(0) scale(0.92);
+  filter: brightness(0.97);
+  transition-duration: 0.1s;
+}
+.lg-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.lg-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-btn { transition: none; }
+  .lg-btn:hover, .lg-btn:active { transform: none; filter: none; }
+}
