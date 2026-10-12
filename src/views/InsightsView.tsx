@@ -2,12 +2,20 @@ import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Lightbulb, Store as StoreIcon } from 'lucide-react';
 import { categoryColor } from '../lib/categories';
-import { buildInsights } from '../lib/insights';
+import { buildInsights, type Insight } from '../lib/insights';
 import { formatMVR } from '../lib/money';
 import type { Store } from '../lib/store';
 import { Badge, Card, Empty, SectionTitle } from '../components/ui';
 
-export default function Insights({ store, goTxns }: { store: Store; goTxns: (filterCategory?: string) => void }) {
+function askFor(ins: Insight): string {
+  if (ins.id === 'spike' || ins.id.startsWith('cat-')) return 'Compare my spending with last month';
+  if (ins.id.startsWith('over-')) return 'Which budgets are over?';
+  if (ins.id.startsWith('pace-')) return 'How can I stay within budget?';
+  if (ins.id.startsWith('save-')) return 'How much did I save this month?';
+  return 'Where did my money go?';
+}
+
+export default function Insights({ store, goTxns, onAsk }: { store: Store; goTxns: (filterCategory?: string) => void; onAsk: (q: string) => void }) {
   const { state } = store;
   const months = useMemo(() => {
     const keys = [...new Set(state.txns.map((t) => t.date.slice(0, 7)))].sort().slice(-6);
@@ -79,12 +87,15 @@ export default function Insights({ store, goTxns }: { store: Store; goTxns: (fil
           <SectionTitle kicker="Calculated" title="What stands out" />
           {insights.length === 0 && <p className="text-sm text-[var(--muted)]">Nothing remarkable — steady months don't trigger alerts. That's good news.</p>}
           {insights.map((ins) => (
-            <button key={ins.id} onClick={() => goTxns(ins.txnFilter?.category)} className="press block w-full rounded-[20px] bg-black/[0.03] p-3.5 text-left dark:bg-white/[0.05]">
+            <div key={ins.id} className="rounded-[20px] bg-black/[0.03] p-3.5 dark:bg-white/[0.05]">
               <Badge tone={ins.severity === 'good' ? 'good' : ins.severity === 'bad' ? 'bad' : ins.severity === 'warn' ? 'warn' : 'neutral'}>{ins.severity}</Badge>
               <p className="mt-1 font-semibold">{ins.title}</p>
               <p className="text-sm text-[var(--muted)]">{ins.detail}</p>
-              <p className="mt-1 text-xs font-bold text-[var(--accent)] underline">Inspect transactions</p>
-            </button>
+              <div className="mt-2 flex gap-4">
+                <button onClick={() => goTxns(ins.txnFilter?.category)} className="press text-xs font-bold underline opacity-70">Inspect transactions</button>
+                <button onClick={() => onAsk(askFor(ins))} className="press text-xs font-bold underline opacity-70">Ask Mino to explain</button>
+              </div>
+            </div>
           ))}
           <div className="flex items-center gap-2 rounded-2xl bg-black/5 p-3 text-sm dark:bg-white/5">
             <StoreIcon size={16} className="shrink-0 text-[var(--muted)]" />

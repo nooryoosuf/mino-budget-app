@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowDownUp, Search, SlidersHorizontal, Undo2, Wallet, X } from 'lucide-react';
 import { CatIcon } from '../components/CatIcon';
@@ -27,7 +27,9 @@ function dayLabel(iso: string): string {
   return new Date(iso + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-export default function Transactions({ store }: { store: Store }) {
+export default function Transactions({ store, onAsk, query = '', catPreset = 'all', navKey = 0 }: {
+  store: Store; onAsk: (q: string) => void; query?: string; catPreset?: string; navKey?: number;
+}) {
   const [q, setQ] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [cat, setCat] = useState('all');
@@ -39,6 +41,16 @@ export default function Transactions({ store }: { store: Store }) {
   const customs = store.state.customCats;
   const cats = allCategories(customs);
   const filtersOn = cat !== 'all' || type !== 'all' || review !== 'all';
+
+  // deep-link from Mino ("show me these transactions")
+  useEffect(() => {
+    if (navKey > 0) {
+      setQ(query);
+      setCat(catPreset);
+      setShowFilters(catPreset !== 'all');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navKey]);
 
   const list = useMemo(() => {
     let l = [...store.state.txns];
@@ -189,6 +201,7 @@ export default function Transactions({ store }: { store: Store }) {
       {editing && (
         <EditDialog
           txn={editing} store={store} onClose={() => setEditing(null)}
+          onAsk={(qq) => { setEditing(null); onAsk(qq); }}
           onDelete={() => { setLastDeleted(editing); store.removeTxn(editing.id); setEditing(null); }}
         />
       )}
@@ -196,7 +209,7 @@ export default function Transactions({ store }: { store: Store }) {
   );
 }
 
-function EditDialog({ txn, store, onClose, onDelete }: { txn: Txn; store: Store; onClose: () => void; onDelete: () => void }) {
+function EditDialog({ txn, store, onClose, onDelete, onAsk }: { txn: Txn; store: Store; onClose: () => void; onDelete: () => void; onAsk: (q: string) => void }) {
   const [merchant, setMerchant] = useState(txn.merchant);
   const [category, setCategory] = useState(txn.category);
   const [notes, setNotes] = useState(txn.notes ?? '');
@@ -225,7 +238,11 @@ function EditDialog({ txn, store, onClose, onDelete }: { txn: Txn; store: Store;
           <Btn onClick={() => { store.updateTxn(txn.id, { merchant: merchant.trim().toUpperCase() || txn.merchant, category, notes, reviewed: true }); store.learn(merchant, category); onClose(); }}>Save</Btn>
           <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
         </div>
-        <button onClick={onDelete} className="mt-2 w-full py-2 text-center text-[13px] font-semibold text-red-600">Delete transaction</button>
+        <button onClick={() => onAsk(`How much did I spend at ${txn.merchant}?`)} className="press mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-soft)] py-2.5 text-[13.5px] font-bold">
+          <img src={`${import.meta.env.BASE_URL}mino-circle.png`} alt="" className="h-5 w-5 rounded-full bg-[#F5B800]" draggable={false} />
+          Ask Mino about this
+        </button>
+        <button onClick={onDelete} className="mt-1 w-full py-2 text-center text-[13px] font-semibold text-red-600">Delete transaction</button>
       </div>
     </div>
   );

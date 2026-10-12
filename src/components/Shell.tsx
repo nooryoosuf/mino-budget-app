@@ -36,8 +36,8 @@ function greeting(): string {
   return 'Good evening';
 }
 
-export default function Shell({ store, tab, setTab, dark, setDark, children }: {
-  store: Store; tab: Tab; setTab: (t: Tab) => void; dark: boolean; setDark: (v: boolean) => void; children: (quick: (k: QuickKind) => void) => React.ReactNode;
+export default function Shell({ store, tab, setTab, dark, setDark, onMino, children }: {
+  store: Store; tab: Tab; setTab: (t: Tab) => void; dark: boolean; setDark: (v: boolean) => void; onMino: (prefill?: string) => void; children: (quick: (k: QuickKind) => void, ask: (q: string) => void) => React.ReactNode;
 }) {
   const [sheet, setSheet] = useState<null | 'add' | 'import'>(null);
   const [preset, setPreset] = useState<TxnType>('expense');
@@ -118,7 +118,7 @@ export default function Shell({ store, tab, setTab, dark, setDark, children }: {
           )}
 
           <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: 'easeOut' }}>
-            {children(quick)}
+            {children(quick, (q: string) => onMino(q))}
           </motion.div>
         </main>
       </div>
@@ -148,6 +148,15 @@ export default function Shell({ store, tab, setTab, dark, setDark, children }: {
           </div>
         </div>
       </div>
+
+      {/* Mino companion FAB */}
+      <button
+        onClick={() => onMino()}
+        aria-label="Ask Mino"
+        className="press fixed bottom-[112px] right-4 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#F5B800] shadow-[0_14px_30px_-10px_rgb(120_60_0/0.5)] md:bottom-6 md:right-6"
+      >
+        <img src={`${import.meta.env.BASE_URL}mino-circle.png`} alt="" className="h-full w-full object-cover" draggable={false} />
+      </button>
 
       <AnimatePresence>
         {sheet && (

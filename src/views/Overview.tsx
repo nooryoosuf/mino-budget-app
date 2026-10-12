@@ -14,8 +14,8 @@ import type { Store } from '../lib/store';
 import type { QuickKind } from '../components/Shell';
 import { Amount, Badge, Bar, Card, LinkBtn, SectionTitle } from '../components/ui';
 
-export default function Overview({ store, go, onQuick }: {
-  store: Store; go: (t: 'txns' | 'budgets' | 'goals' | 'insights') => void; onQuick: (k: QuickKind) => void;
+export default function Overview({ store, go, onQuick, onAsk }: {
+  store: Store; go: (t: 'txns' | 'budgets' | 'goals' | 'insights') => void; onQuick: (k: QuickKind) => void; onAsk: (q: string) => void;
 }) {
   const { state } = store;
   const customs = state.customCats;
@@ -197,6 +197,14 @@ export default function Overview({ store, go, onQuick }: {
             </motion.div>
           ))}
         </div>
+        <button onClick={() => onAsk('Where did my money go?')} className="press mt-3 flex w-full items-center gap-3 rounded-[20px] bg-[var(--surface)] p-3.5 text-left">
+          <img src={`${import.meta.env.BASE_URL}mino-circle.png`} alt="" className="h-10 w-10 shrink-0 rounded-full bg-[#F5B800]" draggable={false} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14.5px] font-bold">Ask Mino</span>
+            <span className="block truncate text-[12.5px] font-medium text-[var(--muted)]">Your money, explained in plain language</span>
+          </span>
+          <ChevronRight size={17} className="shrink-0 text-[var(--muted)]" />
+        </button>
       </motion.section>
 
       {/* alerts */}

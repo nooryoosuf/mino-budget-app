@@ -9,7 +9,7 @@ import type { Budget } from '../lib/types';
 import { parseMvrToLaari, uid, formatMVR } from '../lib/money';
 import { Amount, Bar, Btn, Card, Empty, SectionTitle, inputCls } from '../components/ui';
 
-export default function Budgets({ store }: { store: Store }) {
+export default function Budgets({ store, onAsk }: { store: Store; onAsk: (q: string) => void }) {
   const { state } = store;
   const [name, setName] = useState('');
   const [category, setCategory] = useState('groceries');
@@ -104,6 +104,9 @@ export default function Budgets({ store }: { store: Store }) {
                   <input type="checkbox" checked={b.rollover} onChange={(e) => store.setBudgets(state.budgets.map((x) => x.id === b.id ? { ...x, rollover: e.target.checked } : x))} className="h-4 w-4 accent-[var(--accent)]" />
                   Let unused amount roll over next {b.period === 'weekly' ? 'week' : 'month'}
                 </label>
+                <button onClick={() => onAsk(`How can I stay within my ${b.name} budget?`)} className="press mt-2 text-xs font-bold underline opacity-70">
+                  Ask Mino how to stay within this
+                </button>
               </Card>
             );
           })}

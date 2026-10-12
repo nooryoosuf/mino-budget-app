@@ -7,7 +7,7 @@ import { Amount, Bar, Btn, Card, Empty, SectionTitle, inputCls } from '../compon
 const ISLANDS = ['🏝️ Kuramathi', '🏝️ Maafushi', '🏝️ Thulusdhoo', '🏝️ Addu', '🏝️ Fuvahmulah', '🏝️ Hanifaru'];
 const COLORS = ['#E8930C', '#C2452D', '#96511F', '#E07B00', '#B45309', '#C99A00'];
 
-export default function Goals({ store }: { store: Store }) {
+export default function Goals({ store, onAsk }: { store: Store; onAsk: (q: string) => void }) {
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [monthly, setMonthly] = useState('');
@@ -63,6 +63,9 @@ export default function Goals({ store }: { store: Store }) {
                   <div className="mt-2"><Bar pct={pct} tone="good" /></div>
                   {monthsLeft !== null && <p className="mt-1.5 text-xs text-[var(--muted)]">≈ {monthsLeft} month{monthsLeft === 1 ? '' : 's'} at current pace{monthsLeft === 0 ? ' — reached!' : ''}</p>}
                   <AddFunds store={store} goalId={g.id} />
+                  <button onClick={() => onAsk(`Help me save MVR ${Math.round(g.targetLaari / 100)} for ${g.name}`)} className="press mt-2 text-xs font-bold underline opacity-70">
+                    Ask Mino to help reach this faster
+                  </button>
                 </div>
               </Card>
             );

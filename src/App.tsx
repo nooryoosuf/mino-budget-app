@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { MotionConfig } from 'framer-motion';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
 import { ArrowRight, PiggyBank, Plus } from 'lucide-react';
 import Shell, { type Tab } from './components/Shell';
+import MinoChat from './components/mino/MinoChat';
 import { GlassDefs } from './components/glass/LiquidGlass';
 import { Btn, inputCls } from './components/ui';
 import { parseMvrToLaari } from './lib/money';
@@ -18,6 +19,14 @@ export default function App() {
   const store = useStore();
   const [tab, setTab] = useState<Tab>('overview');
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+  const [mino, setMino] = useState({ open: false, prefill: '', key: 0 });
+  const [activityNav, setActivityNav] = useState({ q: '', cat: 'all', key: 0 });
+
+  const askMino = (prefill = '') => setMino((m) => ({ open: true, prefill, key: m.key + 1 }));
+  const goTxns = (q = '', cat = 'all') => {
+    setActivityNav((a) => ({ q, cat, key: a.key + 1 }));
+    setTab('txns');
+  };
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
@@ -29,18 +38,32 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
     <GlassDefs />
-    <Shell store={store} tab={tab} setTab={setTab} dark={dark} setDark={setDark}>
-      {(quick) => (
+    <Shell store={store} tab={tab} setTab={setTab} dark={dark} setDark={setDark} onMino={askMino}>
+      {(quick, ask) => (
       <Suspense fallback={<div className="space-y-3" aria-busy="true" aria-label="Loading section"><div className="h-40 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" /><div className="h-24 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" /></div>}>
-      {tab === 'overview' && <Overview store={store} go={setTab} onQuick={quick} />}
-      {tab === 'txns' && <Transactions store={store} />}
-      {tab === 'budgets' && <Budgets store={store} />}
-      {tab === 'insights' && <InsightsView store={store} goTxns={() => setTab('txns')} />}
-      {tab === 'goals' && <Goals store={store} />}
+      {tab === 'overview' && <Overview store={store} go={setTab} onQuick={quick} onAsk={ask} />}
+      {tab === 'txns' && <Transactions store={store} onAsk={ask} query={activityNav.q} catPreset={activityNav.cat} navKey={activityNav.key} />}
+      {tab === 'budgets' && <Budgets store={store} onAsk={ask} />}
+      {tab === 'insights' && <InsightsView store={store} onAsk={ask} goTxns={(c) => goTxns('', c ?? '')} />}
+      {tab === 'goals' && <Goals store={store} onAsk={ask} />}
       {tab === 'settings' && <Settings store={store} />}
       </Suspense>
       )}
     </Shell>
+    <AnimatePresence>
+      {mino.open && (
+        <MinoChat
+          store={store}
+          prefill={mino.prefill}
+          prefillKey={mino.key}
+          onClose={() => setMino((m) => ({ ...m, open: false, prefill: '' }))}
+          onInspect={(ref) => {
+            setMino((m) => ({ ...m, open: false, prefill: '' }));
+            goTxns(ref.q ?? '', ref.category ?? 'all');
+          }}
+        />
+      )}
+    </AnimatePresence>
     </MotionConfig>
   );
 }

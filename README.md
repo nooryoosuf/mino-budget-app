@@ -43,6 +43,17 @@ npm run preview  # serve the production build
 
 No credentials, no `.env` values, no external services required.
 
+## Ask Mino (personal treasurer)
+
+Tap the Mino mascot (bottom-right) or "Ask Mino" anywhere in the app. Mino
+answers from your **real recorded data** using deterministic tools in
+`src/lib/mino/` (spending, income, budgets, payday plan, affordability,
+savings plans) — no AI API, no network, no account needed. Budget, goal and
+bulk-filing changes are drafted as **proposal cards** and only apply after
+you confirm. Unknown questions and thin data get honest fallbacks, never
+invented figures. `src/lib/mino/provider.ts` is the seam where a future
+server-side LLM could plug in (tool-calling only; maths stay in app code).
+
 ## Using the app (main journey)
 
 1. Onboarding: name → trusted opening balance → payday → start fresh or load demo.
