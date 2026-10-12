@@ -49,7 +49,10 @@ describe('mino intents', () => {
     expect(parseIntent('Help me save MVR 15000 for a trip in 6 months', s)).toMatchObject({ kind: 'goal-plan', months: 6 });
     expect(parseIntent('Create a savings goal: MVR 15000 for trip', s).kind).toBe('goal-create');
     expect(parseIntent('Create a saving for Vacation', s)).toMatchObject({ kind: 'goal-create', targetLaari: null });
+    expect(parseIntent('Make a saving for a new laptop', s).kind).toBe('goal-create');
     expect(parseIntent('What is my most common expense?', s).kind).toBe('frequent');
+    expect(parseIntent('How much did I spend today?', s).kind).toBe('today');
+    expect(parseIntent('September spending?', s)).toMatchObject({ kind: 'spend-month', mk: expect.stringMatching(/-09$/) });
     expect(parseIntent('blargh wibble', s).kind).toBe('unknown');
   });
 });
@@ -96,6 +99,16 @@ describe('mino tools never invent', () => {
     const a = await minoProvider.answer('What is my most common expense?', s);
     expect(a.text).toMatch(/STO MALE|shows up/i);
     expect(a.text).toMatch(/2 times|shows up/);
+  });
+  it('meets users halfway instead of one stock refusal', async () => {
+    const merch = await minoProvider.answer('Tell me about STO', s);
+    expect(merch.text).toMatch(/STO MALE/);
+    const cat = await minoProvider.answer('Groceries?', s);
+    expect(cat.text).toMatch(/groceries/i);
+    const amt = await minoProvider.answer('MVR 8,000', s);
+    expect(amt.text).toMatch(/afford|saving/i);
+    const varied = await minoProvider.answer('blargh wibble', s);
+    expect(varied.text).not.toMatch(/STO MALE/);
   });
   it('flags possible duplicates close together', () => {
     const dup = {

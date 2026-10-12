@@ -5,6 +5,7 @@
  * (the composer answers honestly instead of guessing).
  */
 import type { StoreShape } from '../store';
+import { allCategories } from '../categories';
 import { parseMvrToLaari } from '../money';
 import { resolveCategory } from './tools';
 
@@ -12,7 +13,8 @@ export type Intent =
   | { kind: 'afford'; amountLaari: number; item: string }
   | { kind: 'plan' }
   | { kind: 'spend-week' }
-  | { kind: 'spend-month'; offset: 0 | -1 }
+  | { kind: 'today' }
+  | { kind: 'spend-month'; offset: 0 | -1; mk: string | null }
   | { kind: 'spend-category'; category: string; raw: string; offset: 0 | -1 }
   | { kind: 'spend-merchant'; merchant: string }
   | { kind: 'income'; offset: 0 | -1 }
@@ -44,6 +46,48 @@ export function extractMvr(text: string): number | null {
 
 export function rangeOffset(t: string): 0 | -1 {
   return /last month|previous month/.test(t) ? -1 : 0;
+}
+
+const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+/** "september" / "last september" → yyyy-mm key (most recent such month). */
+export function findMonthMention(t: string, now = new Date()): string | null {
+  const low = t.toLowerCase();
+  const idx = MONTH_NAMES.findIndex((m) => new RegExp(`\\b${m}\\b`).test(low));
+  if (idx < 0) return null;
+  let year = now.getFullYear();
+  if (idx > now.getMonth()) year -= 1;
+  if (/last|previous|past/.test(low)) {
+    // "last september" when september already passed this year → still that one
+    if (idx > now.getMonth()) year -= 1;
+  }
+  return `${year}-${String(idx + 1).padStart(2, '0')}`;
+}
+
+/** Merchant from history mentioned anywhere in the text. */
+export function findMerchantMention(t: string, s: StoreShape): string | null {
+  const low = ` ${t.toLowerCase()} `;
+  const names = [...new Set(s.txns.map((x) => x.merchant))].sort((a, b) => b.length - a.length);
+  for (const m of names) {
+    if (m.length >= 3 && low.includes(m.toLowerCase())) return m;
+  }
+  // word-level: "STO" inside "tell me about STO" still means STO MALE
+  const words = low.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+  for (const m of names) {
+    const mw = m.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+    if (mw.some((w) => words.includes(w))) return m;
+  }
+  return null;
+}
+
+/** Category (built-in or custom) mentioned anywhere in the text. */
+export function findCategoryMention(t: string, s: StoreShape): string | null {
+  const low = t.toLowerCase();
+  for (const c of allCategories(s.customCats)) {
+    if (c.label.toLowerCase().length >= 3 && low.includes(c.label.toLowerCase())) return c.key;
+    if (c.key.length >= 4 && new RegExp(`\\b${c.key}\\b`).test(low)) return c.key;
+  }
+  return resolveCategory(s, t);
 }
 
 export function extractMonths(t: string): number | null {
@@ -112,7 +156,7 @@ export function parseIntent(raw: string, s: StoreShape): Intent {
   if (/sav(e|ing|ings)|goal|trip|set aside|put aside/.test(t)) {
     const amt = extractMvr(t);
     const months = extractMonths(t);
-    const wantsCreate = /creat|start|new|add|open|make me/.test(t);
+    const wantsCreate = /creat|start|new|add|open|\bmake\b/.test(t);
     if (wantsCreate) {
       const name = cleanGoalName(t);
       return { kind: 'goal-create', name: name || 'savings goal', targetLaari: amt && amt > 0 ? amt : null, months };
@@ -157,7 +201,8 @@ export function parseIntent(raw: string, s: StoreShape): Intent {
   if (/sav(e|ed|ings)|keep|kept|left over/.test(t) && /month|this/.test(t)) return { kind: 'saved' };
   // income
   if (/salary|earn|income|paid|paycheck|allowance/.test(t)) return { kind: 'income', offset: rangeOffset(t) };
-  // week
+  // week & today
+  if (/\btoday\b/.test(t) && /spend|spent|much|total/.test(t)) return { kind: 'today' };
   if (/this week|past (7|seven) days|last 7 days/.test(t)) return { kind: 'spend-week' };
   // merchant — "spent at STO", "at Redwave", "merchant X"
   {
@@ -179,11 +224,17 @@ export function parseIntent(raw: string, s: StoreShape): Intent {
     }
     // bare "where did my money go"
     if (/where.*(money|salary|go|spent)|breakdown|summary/.test(t)) {
-      return rangeOffset(t) === -1 ? { kind: 'spend-month', offset: -1 } : { kind: 'spend-month', offset: 0 };
+      const mk = findMonthMention(t);
+      if (mk) return { kind: 'spend-month', offset: 0, mk };
+      return rangeOffset(t) === -1 ? { kind: 'spend-month', offset: -1, mk: null } : { kind: 'spend-month', offset: 0, mk: null };
     }
   }
-  // month totals
-  if (/this month|month.*spend|spend.*month/.test(t)) return { kind: 'spend-month', offset: rangeOffset(t) };
+  // month totals, incl. named months ("september spending")
+  if (/this month|month.*spend|spend.*month/.test(t)) return { kind: 'spend-month', offset: rangeOffset(t), mk: null };
+  {
+    const mk = findMonthMention(t);
+    if (mk && /spend|spent|much|total|summary|breakdown/.test(t)) return { kind: 'spend-month', offset: 0, mk };
+  }
 
   return { kind: 'unknown' };
 }

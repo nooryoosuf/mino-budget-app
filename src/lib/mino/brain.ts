@@ -12,6 +12,7 @@
  */
 import { allCategories } from '../categories';
 import type { StoreShape } from '../store';
+import { findMonthMention } from './parse';
 import { monthKey, summarizeMonth } from './tools';
 import { parseIntent } from './parse';
 import { respond, suggestionsFor } from './answer';
@@ -149,7 +150,7 @@ export function buildBrainContext(s: StoreShape): Record<string, unknown> {
 }
 
 const SYSTEM = `You route one user question to exactly one finance_intent call for the Mino budgeting app (Maldives, MVR currency).
-Rules: amounts are plain MVR numbers. category must be a key from the context's categoryKeys. Offsets: 0 = this month, -1 = last month. If the question is a greeting, small talk, or you truly cannot map it, use kind "unknown". Output ONLY the function call, no text.`;
+Rules: amounts are plain MVR numbers. category must be a key from the context's categoryKeys. Offsets: 0 = this month, -1 = last month. If the user names a month ("september"), pass it through as month. If they ask about today, use kind "today". If the question is a greeting, small talk, or you truly cannot map it, use kind "unknown". Output ONLY the function call, no text.`;
 
 function declaration(s: StoreShape): Record<string, unknown> {
   return {
@@ -160,10 +161,11 @@ function declaration(s: StoreShape): Record<string, unknown> {
       properties: {
         kind: {
           type: 'STRING',
-          enum: ['afford', 'plan', 'spend-week', 'spend-month', 'spend-category', 'spend-merchant', 'income', 'saved', 'compare', 'biggest', 'budgets', 'balance', 'payday', 'upcoming', 'ontrack', 'goal-plan', 'goal-create', 'budget-set', 'budget-change', 'bulk-file', 'frequent', 'radar', 'greet', 'help', 'unknown'],
+          enum: ['afford', 'plan', 'spend-week', 'today', 'spend-month', 'spend-category', 'spend-merchant', 'income', 'saved', 'compare', 'biggest', 'budgets', 'balance', 'payday', 'upcoming', 'ontrack', 'goal-plan', 'goal-create', 'budget-set', 'budget-change', 'bulk-file', 'frequent', 'radar', 'greet', 'help', 'unknown'],
         },
         amountMvr: { type: 'NUMBER' },
         item: { type: 'STRING' },
+        month: { type: 'STRING', description: 'A month name like september, or yyyy-mm' },
         category: { type: 'STRING', enum: allCategories(s.customCats).map((c) => c.key) },
         merchant: { type: 'STRING' },
         offset: { type: 'NUMBER', enum: [0, -1] },
@@ -230,7 +232,11 @@ export function mapFnCall(fc: FnCall, s: StoreShape): Intent {
       if (amt === null || amt <= 0) return { kind: 'unknown' };
       return { kind: 'afford', amountLaari: Math.round(amt * 100), item: str(a.item).slice(0, 40) || 'this' };
     }
-    case 'spend-month': return { kind: 'spend-month', offset: num(a.offset) === -1 ? -1 : 0 };
+    case 'spend-month': {
+      const raw = str(a.month);
+      const mk = /^\d{4}-\d{2}$/.test(raw) ? raw : raw ? findMonthMention(raw) : null;
+      return { kind: 'spend-month', offset: num(a.offset) === -1 ? -1 : 0, mk };
+    }
     case 'spend-category': {
       const c = validCat(str(a.category));
       return c ? { kind: 'spend-category', category: c, raw: c, offset: num(a.offset) === -1 ? -1 : 0 } : { kind: 'unknown' };
@@ -260,7 +266,7 @@ export function mapFnCall(fc: FnCall, s: StoreShape): Intent {
       const c = validCat(str(a.category));
       return c ? { kind: 'bulk-file', category: c, raw: c } : { kind: 'unknown' };
     }
-    case 'plan': case 'spend-week': case 'saved': case 'compare': case 'biggest':
+    case 'plan': case 'spend-week': case 'today': case 'saved': case 'compare': case 'biggest':
     case 'budgets': case 'balance': case 'payday': case 'upcoming': case 'ontrack':
     case 'frequent': case 'radar': case 'greet': case 'help':
       return { kind: String(a.kind) } as Intent;

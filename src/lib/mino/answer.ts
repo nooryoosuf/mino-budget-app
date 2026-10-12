@@ -4,11 +4,12 @@
  * unknown intents and empty histories get graceful fallbacks, never numbers.
  */
 import { categoryLabel } from '../categories';
+import { extractMvr, findCategoryMention, findMerchantMention, findMonthMention } from './parse';
 import { fmt } from './tools';
 import {
   biggestExpenses, budgetStatus, compareMonths, evaluatePurchase, frequentSpending, monthKey,
   outflowOf, proposeBudgetUpdate, proposeGoal, safePosition, savingsPlan,
-  searchMerchant, spendingByCategory, summarizeMonth, summarizeWeek,
+  searchMerchant, spendingByCategory, summarizeMonth, summarizeRange, summarizeWeek,
 } from './tools';
 import { detectAnomalies } from './radar';
 import type { Intent } from './parse';
@@ -64,8 +65,23 @@ export function respond(raw: string, intent: Intent, s: StoreShape): MinoAnswer 
       };
     }
 
+    case 'today': {
+      const iso = new Date().toISOString().slice(0, 10);
+      const d = summarizeRange(s, iso, iso, 'today');
+      if (d.n === 0) {
+        return { mood: 'idle', text: `Nothing recorded today yet — a quiet day, or something you haven't logged. Tap Pay on Home and I'll count it.`, followUps: ['Where did my money go?'] };
+      }
+      return {
+        mood: 'idle', text: `Today: ${fmt(d.expense)} across ${d.n} transaction${d.n === 1 ? '' : 's'}.`,
+        followUps: ['Where did my money go?', 'Plan my money until payday'],
+        inspect: { label: 'See today', q: '' },
+      };
+    }
+
     case 'spend-month': {
-      const m = summarizeMonth(s, intent.offset);
+      const m = intent.mk
+        ? summarizeRange(s, `${intent.mk}-01`, `${intent.mk}-31`, new Date(`${intent.mk}-02T00:00`).toLocaleString('en', { month: 'long', year: 'numeric' }))
+        : summarizeMonth(s, intent.offset);
       if (m.n === 0) {
         return { mood: 'idle', text: `Nothing recorded for ${m.label} yet — I won't guess. Log a few transactions and I'll break it down.`, followUps: ['Plan my money until payday'] };
       }
@@ -338,16 +354,67 @@ export function respond(raw: string, intent: Intent, s: StoreShape): MinoAnswer 
     }
 
     default: {
+      // partial understanding — meet the user halfway, never one stock line
+      const merch = findMerchantMention(raw, s);
+      if (merch && s.txns.length > 0) {
+        const r = searchMerchant(s, merch);
+        return {
+          mood: 'idle',
+          text: `Assuming you meant ${merch} — it shows up ${r.n} time${r.n === 1 ? '' : 's'} (${fmt(r.total)} of recorded spending). Correct me if that's not the one.`,
+          followUps: ['Where did my money go?', 'Show my biggest expenses'],
+          inspect: { label: 'See matching transactions', q: merch },
+        };
+      }
+      const catK = findCategoryMention(raw, s);
+      if (catK && s.txns.length > 0) {
+        const mk = monthKey(0);
+        const list = s.txns.filter((t) => t.date.slice(0, 7) === mk && t.category === catK && (t.type === 'expense' || t.type === 'cash_withdrawal'));
+        const total = list.reduce((a, t) => a + t.amountLaari, 0);
+        const label = categoryLabel(catK, s.customCats);
+        return {
+          mood: 'idle',
+          text: list.length
+            ? `I caught ${label.toLowerCase()} — this month that's ${fmt(total)} across ${list.length}. Did you mean this month or last? Ask with the month to be sure.`
+            : `I caught ${label.toLowerCase()}, but nothing's recorded there this month. Try adding "last month"?`,
+          followUps: ['Where did my money go?', 'Which budgets are over?'],
+          inspect: list.length ? { label: `See ${label.toLowerCase()} transactions`, category: catK } : undefined,
+        };
+      }
+      if (s.txns.length > 0) {
+        const mk = findMonthMention(raw);
+        if (mk) {
+          const label = new Date(`${mk}-02T00:00`).toLocaleString('en', { month: 'long', year: 'numeric' });
+          const m = summarizeRange(s, `${mk}-01`, `${mk}-31`, label);
+          return {
+            mood: 'idle',
+            text: m.n ? `${label}: ${fmt(m.income)} in, ${fmt(m.expense)} out across ${m.n} records.` : `Nothing recorded for ${label} — I won't fill the gap by guessing.`,
+            followUps: ['Compare with last month', 'Show my biggest expenses'],
+          };
+        }
+        const amt = extractMvr(raw);
+        if (amt !== null && amt > 0) {
+          return {
+            mood: 'idle',
+            text: `I see ${fmt(amt)} in your message — are you checking whether you can afford something at that price, or saving toward it? One more word and I'll run the numbers.`,
+            followUps: [`Can I afford ${fmt(amt)}?`, `Help me save ${fmt(amt)}`],
+          };
+        }
+      }
       if (thin(s)) {
         return {
           mood: 'idle',
-          text: `I want to answer from your real records, not guess — and there's barely anything here yet. Try "where did my money go?" once you've logged a few transactions, or "what can you help with?" for ideas.`,
+          text: `I want to answer from your real records, not guess — and there's barely anything here yet. Log a few transactions (or load demo data in Settings), then try "where did my money go?"`,
           followUps: ['What can you help with?'],
         };
       }
+      const variants = [
+        `Hmm, that phrasing lost me — but I can work with months ("september"), categories ("food"), shops ("STO"), or amounts ("MVR 8,000"). What are we looking at?`,
+        `Not quite following — give me one anchor: a month, a category, a shop, or an amount, and I'll take it from there.`,
+        `I only work from your recorded data, so help me aim: which month, category or shop is this about?`,
+      ];
       return {
         mood: 'idle',
-        text: `I'm not sure what you're asking — I only answer from your recorded data, I never guess. Try one of these, or rephrase with a month, category or merchant.`,
+        text: variants[raw.length % variants.length],
         followUps: suggestionsFor(s).slice(0, 3),
       };
     }
