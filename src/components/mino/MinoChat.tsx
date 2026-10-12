@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUp, Search, X } from 'lucide-react';
 import { minoProvider } from '../../lib/mino/provider';
-import { fmt } from '../../lib/mino/tools';
+import { extractMonths, extractMvr, parseIntent } from '../../lib/mino/parse';
+import { fmt, proposeGoal } from '../../lib/mino/tools';
 import type { InspectRef, MinoAnswer, Proposal } from '../../lib/mino/types';
 import { uid } from '../../lib/money';
 import type { Store } from '../../lib/store';
@@ -34,6 +35,7 @@ export default function MinoChat({ store, prefill, prefillKey, onClose, onInspec
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const [mood, setMood] = useState<MinoAnswer['mood']>('idle');
+  const [pending, setPending] = useState<{ name: string; months: number | null } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const greeted = useRef(false);
 
@@ -46,11 +48,41 @@ export default function MinoChat({ store, prefill, prefillKey, onClose, onInspec
     if (!q || thinking) return;
     setMsgs((m) => [...m, { id: uid(), role: 'user', text: q }]);
     setInput('');
+
+    // slot filling — Mino asked a follow-up (e.g. goal target)
+    if (pending) {
+      const low = q.toLowerCase();
+      if (/cancel|never ?mind|forget|stop|drop it/.test(low)) {
+        setPending(null);
+        setMsgs((m) => [...m, { id: uid(), role: 'mino', text: `Dropped it — nothing saved.`, mood: 'idle' }]);
+        return;
+      }
+      const amt = extractMvr(q);
+      if ((amt === null || amt <= 0) && parseIntent(q, store.state).kind !== 'unknown') {
+        setPending(null); // changed topic — fall through to normal answering
+      } else if (amt !== null && amt > 0) {
+        const months = extractMonths(q) ?? pending.months;
+        const r = proposeGoal(store.state, pending.name, amt, months ?? undefined);
+        setPending(null);
+        if ('error' in r) {
+          setMsgs((m) => [...m, { id: uid(), role: 'mino', text: r.error, mood: 'idle' }]);
+        } else {
+          setMood('happy');
+          setMsgs((m) => [...m, { id: uid(), role: 'mino', text: `Got it — ${fmt(amt)} for ${pending.name}. Confirm and I'll create it.`, mood: 'happy', proposal: r }]);
+        }
+        return;
+      } else {
+        setMsgs((m) => [...m, { id: uid(), role: 'mino', text: `I need a number for that — like MVR 10,000 (or say "cancel").`, mood: 'idle' }]);
+        return;
+      }
+    }
+
     setThinking(true);
     setMood('thinking');
     try {
       const a = await minoProvider.answer(q, store.state);
       setMood(a.mood);
+      if (a.clarify) setPending({ name: a.clarify.draft.name, months: a.clarify.draft.months });
       setMsgs((m) => [...m, { id: uid(), role: 'mino', text: a.text, mood: a.mood, proposal: a.proposal, inspect: a.inspect, followUps: a.followUps }]);
     } catch {
       setMood('idle');

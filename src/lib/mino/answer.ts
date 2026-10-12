@@ -6,8 +6,8 @@
 import { categoryLabel } from '../categories';
 import { fmt } from './tools';
 import {
-  biggestExpenses, budgetStatus, compareMonths, evaluatePurchase, monthKey,
-  outflowOf, incomeOf, proposeBudgetUpdate, proposeGoal, safePosition, savingsPlan,
+  biggestExpenses, budgetStatus, compareMonths, evaluatePurchase, frequentSpending, monthKey,
+  outflowOf, proposeBudgetUpdate, proposeGoal, safePosition, savingsPlan,
   searchMerchant, spendingByCategory, summarizeMonth, summarizeWeek,
 } from './tools';
 import type { Intent } from './parse';
@@ -156,6 +156,22 @@ export function respond(raw: string, intent: Intent, s: StoreShape): MinoAnswer 
       };
     }
 
+    case 'frequent': {
+      const f = frequentSpending(s);
+      if (!f.merchant && !f.category) {
+        return { mood: 'idle', text: `Not enough history to call anything "common" yet — log a few more weeks and I'll spot your repeats.` };
+      }
+      const bits: string[] = [];
+      if (f.merchant) bits.push(`${f.merchant.name} shows up ${f.merchant.n} times (${fmt(f.merchant.total)})`);
+      if (f.category) bits.push(`${f.category.label.toLowerCase()} ${f.category.n} times (${fmt(f.category.total)})`);
+      return {
+        mood: 'idle',
+        text: `Your most common spending ${f.scope}: ${bits.join(' · ')}. Small repeats like these are usually the easiest place to trim.`,
+        followUps: ['Show my biggest expenses', 'Where did my money go?'],
+        inspect: f.merchant ? { label: `See ${f.merchant.name} visits`, q: f.merchant.name } : undefined,
+      };
+    }
+
     case 'budgets': {
       if (s.budgets.length === 0) {
         return { mood: 'idle', text: `You haven't set any budgets yet. Tell me one — "set my food budget to MVR 2,000" — and I'll draft it for your approval.`, followUps: ['Plan my money until payday'] };
@@ -254,6 +270,14 @@ export function respond(raw: string, intent: Intent, s: StoreShape): MinoAnswer 
     }
 
     case 'goal-create': {
+      if (intent.targetLaari === null) {
+        return {
+          mood: 'happy',
+          text: `A ${intent.name} fund — love it. How much should we aim for? Just reply with a number like MVR 10,000${intent.months ? ` (I'll spread it over ${intent.months} months)` : ''}.`,
+          clarify: { prompt: 'goal-target', slot: 'goal-target', draft: { name: intent.name, months: intent.months } },
+          followUps: [],
+        };
+      }
       const r = proposeGoal(s, intent.name, intent.targetLaari, intent.months ?? undefined);
       if ('error' in r) return { mood: 'idle', text: r.error };
       return { mood: 'happy', text: `Here's the draft — confirm and I'll create it.`, proposal: r, followUps: ['Am I on track?'] };

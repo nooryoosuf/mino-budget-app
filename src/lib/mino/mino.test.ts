@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { minoProvider } from './provider';
-import { parseIntent, extractMvr } from './parse';
+import { parseIntent, extractMvr, cleanGoalName } from './parse';
 import { evaluatePurchase, outflowOf, proposeBudgetUpdate, savingsPlan, searchMerchant } from './tools';
 import type { StoreShape } from '../store';
 import type { Txn } from '../types';
@@ -46,6 +46,8 @@ describe('mino intents', () => {
     expect(parseIntent('Which budgets are over?', s).kind).toBe('budgets');
     expect(parseIntent('Help me save MVR 15000 for a trip in 6 months', s)).toMatchObject({ kind: 'goal-plan', months: 6 });
     expect(parseIntent('Create a savings goal: MVR 15000 for trip', s).kind).toBe('goal-create');
+    expect(parseIntent('Create a saving for Vacation', s)).toMatchObject({ kind: 'goal-create', targetLaari: null });
+    expect(parseIntent('What is my most common expense?', s).kind).toBe('frequent');
     expect(parseIntent('blargh wibble', s).kind).toBe('unknown');
   });
 });
@@ -81,5 +83,16 @@ describe('mino tools never invent', () => {
     const a = await minoProvider.answer('Where did my money go?', empty);
     expect(a.text).not.toMatch(/MVR [\d,]+/);
     expect(a.text).toMatch(/don't have anything/i);
+  });
+  it('goal without amount asks a follow-up, then proposes', async () => {
+    expect(cleanGoalName('create a saving for vacation')).toBe('Vacation');
+    const a = await minoProvider.answer('Create a saving for Vacation', s);
+    expect(a.clarify?.draft.name).toBe('Vacation');
+    expect(a.text).toMatch(/how much/i);
+  });
+  it('most-common expense uses counts from records', async () => {
+    const a = await minoProvider.answer('What is my most common expense?', s);
+    expect(a.text).toMatch(/STO MALE|shows up/i);
+    expect(a.text).toMatch(/2 times|shows up/);
   });
 });

@@ -25,7 +25,8 @@ export type Intent =
   | { kind: 'upcoming' }
   | { kind: 'ontrack' }
   | { kind: 'goal-plan'; targetLaari: number; months: number | null }
-  | { kind: 'goal-create'; name: string; targetLaari: number; months: number | null }
+  | { kind: 'goal-create'; name: string; targetLaari: number | null; months: number | null }
+  | { kind: 'frequent' }
   | { kind: 'budget-set'; category: string; raw: string; amountLaari: number }
   | { kind: 'budget-change'; category: string; raw: string; deltaLaari: number }
   | { kind: 'bulk-file'; category: string; raw: string }
@@ -40,15 +41,31 @@ export function extractMvr(text: string): number | null {
   return parseMvrToLaari(raw);
 }
 
-function rangeOffset(t: string): 0 | -1 {
+export function rangeOffset(t: string): 0 | -1 {
   return /last month|previous month/.test(t) ? -1 : 0;
 }
 
-const MONTHS_OF = (t: string): number | null => {
+export function extractMonths(t: string): number | null {
   const m = t.match(/in\s+(\d{1,2})\s*months?|(\d{1,2})\s*months?/);
   const n = m ? Number(m[1] ?? m[2]) : NaN;
   return Number.isFinite(n) && n > 0 && n <= 120 ? n : null;
-};
+}
+
+/** "create a saving for Vacation" → "Vacation". */
+export function cleanGoalName(t: string): string {
+  return t
+    .replace(/^(please\s+|hey mino,?\s*|mino,?\s*)/, '')
+    .replace(/^(create|start|make|add|open|set up|set)\s+(a|an|new|my)?\s*/, '')
+    .replace(/\s*(savings?|saving|goal)(\s+for)?\s*/, ' ')
+    .replace(/\s+for\s+/, ' ')
+    .replace(/(mvr|rf\.?|rufiyaa)\s*[\d,.]+/gi, ' ')
+    .replace(/in\s+\d{1,2}\s*months?/g, ' ')
+    .replace(/\b(a|an|the|my|me|to|please)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^[a-z]/, (c) => c.toUpperCase())
+    .slice(0, 40);
+}
 
 export function parseIntent(raw: string, s: StoreShape): Intent {
   const t = raw.trim().toLowerCase();
@@ -90,17 +107,16 @@ export function parseIntent(raw: string, s: StoreShape): Intent {
     }
   }
 
-  // savings goals — "help me save 15000 for a trip in 6 months"
+  // savings goals — create-first ("create a saving for Vacation"), then planning
   if (/sav(e|ing|ings)|goal|trip|set aside|put aside/.test(t)) {
     const amt = extractMvr(t);
-    const months = MONTHS_OF(t);
+    const months = extractMonths(t);
+    const wantsCreate = /creat|start|new|add|open|make me/.test(t);
+    if (wantsCreate) {
+      const name = cleanGoalName(t);
+      return { kind: 'goal-create', name: name || 'savings goal', targetLaari: amt && amt > 0 ? amt : null, months };
+    }
     if (amt !== null && amt > 0) {
-      const name = t.replace(/(help me |i want to |plan to |trying to )?sav(e|ing|ings)?/g, '')
-        .replace(/(mvr|rf\.?|rufiyaa)\s*[\d,.]+/gi, '').replace(/for|in \d+ months?|a |my /g, ' ')
-        .replace(/\s+/g, ' ').trim();
-      if (/create|start|new|add/.test(t) || /goal/.test(t)) {
-        return { kind: 'goal-create', name: name || 'savings goal', targetLaari: amt, months };
-      }
       return { kind: 'goal-plan', targetLaari: amt, months };
     }
     if (/on track|am i (doing )?(ok|good|fine)|progress/.test(t)) return { kind: 'ontrack' };
@@ -117,6 +133,9 @@ export function parseIntent(raw: string, s: StoreShape): Intent {
       if (cat) return { kind: 'bulk-file', category: cat, raw: m[1].trim() };
     }
   }
+
+  // most common / frequent spending
+  if (/most (common|frequent)|most often|repeat|regularly|keeps? showing up|where.*most/.test(t)) return { kind: 'frequent' };
 
   // comparisons
   if (/compar|versus|\bvs\b|last month|previous month/.test(t) && /spend|month/.test(t)) return { kind: 'compare' };

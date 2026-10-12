@@ -93,6 +93,43 @@ export function biggestExpenses(s: StoreShape, monthOffset = 0, n = 5): Txn[] {
     .slice(0, n);
 }
 
+export interface Frequent {
+  scope: string;
+  merchant: { name: string; n: number; total: number } | null;
+  category: { key: string; label: string; n: number; total: number } | null;
+  txns: number;
+}
+
+/** Most-frequent merchant & category — "most common" means count, not size. */
+export function frequentSpending(s: StoreShape): Frequent {
+  const now = new Date();
+  const mk = monthKey(0);
+  let pool = s.txns.filter((t) => t.date.slice(0, 7) === mk && isOut(t));
+  let scope = 'this month';
+  if (pool.length < 3) {
+    pool = s.txns.filter(isOut);
+    scope = 'all recorded history';
+  }
+  const byM = new Map<string, { n: number; total: number }>();
+  const byC = new Map<string, { n: number; total: number }>();
+  for (const t of pool) {
+    const m = byM.get(t.merchant) ?? { n: 0, total: 0 };
+    m.n++; m.total += t.amountLaari;
+    byM.set(t.merchant, m);
+    const c = byC.get(t.category) ?? { n: 0, total: 0 };
+    c.n++; c.total += t.amountLaari;
+    byC.set(t.category, c);
+  }
+  const topM = [...byM.entries()].sort((a, b) => b[1].n - a[1].n || b[1].total - a[1].total)[0];
+  const topC = [...byC.entries()].sort((a, b) => b[1].n - a[1].n || b[1].total - a[1].total)[0];
+  return {
+    scope,
+    merchant: topM ? { name: topM[0], n: topM[1].n, total: topM[1].total } : null,
+    category: topC ? { key: topC[0], label: categoryLabel(topC[0], s.customCats), n: topC[1].n, total: topC[1].total } : null,
+    txns: pool.length,
+  };
+}
+
 export function compareMonths(s: StoreShape): { cur: Summary; prev: Summary; deltaPct: number | null } {
   const cur = summarizeMonth(s, 0);
   const prev = summarizeMonth(s, -1);
