@@ -149,17 +149,14 @@ export default function Shell({ store, tab, setTab, dark, setDark, onMino, child
         </div>
       </div>
 
-      {/* Mino companion FAB — gentle levitation */}
-      <motion.button
+      {/* Mino companion FAB — gentle CSS levitation (compositor-friendly) */}
+      <button
         onClick={() => onMino()}
         aria-label="Ask Mino"
-        animate={{ y: [0, -7, 0] }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-        whileTap={{ scale: 0.88 }}
-        className="fixed bottom-[112px] right-4 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#F5B800] shadow-[0_14px_30px_-10px_rgb(120_60_0/0.5)] md:bottom-6 md:right-6"
+        className="levitate fixed bottom-[112px] right-4 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#F5B800] shadow-[0_14px_30px_-10px_rgb(120_60_0/0.5)] md:bottom-6 md:right-6"
       >
         <img src={`${import.meta.env.BASE_URL}mino-circle.png`} alt="" className="h-full w-full object-cover" draggable={false} />
-      </motion.button>
+      </button>
 
       <AnimatePresence>
         {sheet && (

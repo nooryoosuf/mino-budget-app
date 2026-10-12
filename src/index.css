@@ -105,7 +105,19 @@ html, body {
 .card-shadow { box-shadow: none; }
 .dark .card-shadow { box-shadow: none; }
 
-/* horizontal snap carousel */
+/* gentle levitation for the Mino FAB — pure CSS so it runs on the
+   compositor even on low-end phones; disabled under reduced-motion */
+@keyframes levitate {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+.levitate {
+  animation: levitate 3.2s ease-in-out infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .levitate { animation: none; }
+}
 .snapx { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
 .snapx > * { scroll-snap-align: center; }
 
