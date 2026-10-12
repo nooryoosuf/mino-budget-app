@@ -8,7 +8,7 @@ import type { Store } from '../lib/store';
 import type { TxnType } from '../lib/types';
 import QuickAdd from './QuickAdd';
 import ImportWizard from './ImportWizard';
-import { Avatar, SheetHandle } from './ui';
+import { SheetHandle } from './ui';
 
 export type Tab = 'overview' | 'txns' | 'budgets' | 'insights' | 'goals' | 'settings';
 export type QuickKind = 'expense' | 'income' | 'transfer' | 'import';
@@ -91,7 +91,7 @@ export default function Shell({ store, tab, setTab, dark, setDark, children }: {
         <main className="mx-auto min-w-0 w-full max-w-[480px] flex-1 px-4 pb-44 pt-[max(0.9rem,env(safe-area-inset-top))] md:max-w-none md:px-0 md:pt-0">
           {/* app header */}
           <header className="mb-4 flex items-center gap-3 md:hidden">
-            <Avatar name={name || 'R'} />
+            <img src={`${import.meta.env.BASE_URL}mino-circle.png`} alt="Mino" className="h-10 w-10 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-semibold text-[var(--muted)]">{today}</p>
               <h1 className="track-tight truncate text-[19px] font-bold leading-tight">
