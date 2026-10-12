@@ -15,7 +15,7 @@ function fakeStore(txns: Txn[] = []): Store {
   };
   return {
     state,
-    addTxn: (t) => {
+    addTxn: (t: Parameters<Store['addTxn']>[0]) => {
       state.txns = [{ ...t, id: `t${state.txns.length}`, createdAt: '', updatedAt: '' }, ...state.txns];
     },
   } as unknown as Store;
