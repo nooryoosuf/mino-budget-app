@@ -1,4 +1,5 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Component, Suspense, lazy, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { AnimatePresence, MotionConfig } from 'framer-motion';
 import { ArrowRight, PiggyBank, Plus } from 'lucide-react';
 import Shell, { type Tab } from './components/Shell';
@@ -15,6 +16,33 @@ const Budgets = lazy(() => import('./views/Budgets'));
 const InsightsView = lazy(() => import('./views/InsightsView'));
 const Goals = lazy(() => import('./views/Goals'));
 const Settings = lazy(() => import('./views/Settings'));
+
+/** A failed lazy chunk must never hang on the skeleton — offer a reload. */
+class SectionError extends Component<{ onTab: Tab; children: ReactNode }, { err: unknown }> {
+  state = { err: null as unknown };
+  static getDerivedStateFromError(err: unknown) {
+    return { err };
+  }
+  render() {
+    if (this.state.err) {
+      return (
+        <div className="rounded-[22px] bg-[var(--surface)] p-6 text-center">
+          <p className="track-tight text-[17px] font-bold">This section didn't load</p>
+          <p className="mx-auto mt-1 max-w-xs text-sm text-[var(--muted)]">
+            Usually a stale update on the installed app — reloading fetches the fresh version.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="press mx-auto mt-4 flex h-11 items-center rounded-full bg-[var(--accent)] px-6 text-sm font-bold text-[#1c1500]"
+          >
+            Reload app
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const store = useStore();
@@ -57,6 +85,7 @@ export default function App() {
     <GlassDefs />
     <Shell store={store} tab={tab} setTab={setTab} dark={dark} setDark={setDark} onMino={askMino} importSeed={importSeed}>
       {(quick, ask) => (
+      <SectionError key={tab} onTab={tab}>
       <Suspense fallback={<div className="space-y-3" aria-busy="true" aria-label="Loading section"><div className="h-40 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" /><div className="h-24 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" /></div>}>
       {tab === 'overview' && <Overview store={store} go={setTab} onQuick={quick} onAsk={ask} />}
       {tab === 'txns' && <Transactions store={store} onAsk={ask} query={activityNav.q} catPreset={activityNav.cat} navKey={activityNav.key} />}
@@ -65,6 +94,7 @@ export default function App() {
       {tab === 'goals' && <Goals store={store} onAsk={ask} />}
       {tab === 'settings' && <Settings store={store} />}
       </Suspense>
+      </SectionError>
       )}
     </Shell>
     <AnimatePresence>

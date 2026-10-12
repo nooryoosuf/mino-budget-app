@@ -1,33 +1,59 @@
-/* Mino offline shell — cache-first for same-origin GETs, app shell fallback.
-   Versioned cache; old caches are purged on activate. */
-const V = 'mino-v1';
+/* Mino offline shell v2 — navigations go network-first (self-healing after
+   deploys), hashed assets use stale-while-revalidate. Old caches purged. */
+const V = 'mino-v2';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
-  e.waitUntil(caches.open(V).then((c) => c.add('./')));
+  e.waitUntil(
+    caches
+      .open(V)
+      .then((c) => c.add('./').catch(() => {}))
+      .catch(() => {}),
+  );
 });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys()
+    caches
+      .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== V).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+
+  // app shell / navigations: fresh index first, cached shell when offline
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(V).then((c) => c.put('./', copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match('./')),
+    );
+    return;
+  }
+
+  // versioned assets: serve cache instantly, refresh in background
   e.respondWith(
-    caches.match(e.request).then(
-      (hit) =>
-        hit ||
-        fetch(e.request).then((res) => {
+    caches.match(e.request).then((hit) => {
+      const net = fetch(e.request)
+        .then((res) => {
           if (res.ok) {
             const copy = res.clone();
             caches.open(V).then((c) => c.put(e.request, copy));
           }
           return res;
-        }).catch(() => caches.match('./')),
-    ),
+        })
+        .catch(() => hit);
+      return hit || net;
+    }),
   );
 });
