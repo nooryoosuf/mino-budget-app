@@ -18,7 +18,13 @@ const Settings = lazy(() => import('./views/Settings'));
 export default function App() {
   const store = useStore();
   const [tab, setTab] = useState<Tab>('overview');
-  const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+  const [dark, setDark] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mino-theme');
+      if (saved) return saved === 'dark';
+    } catch { /* private mode */ }
+    return false; // default: light mode
+  });
   const [mino, setMino] = useState({ open: false, prefill: '', key: 0 });
   const [activityNav, setActivityNav] = useState({ q: '', cat: 'all', key: 0 });
 
@@ -31,6 +37,9 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#080807' : '#F5F4F0');
+    try {
+      localStorage.setItem('mino-theme', dark ? 'dark' : 'light');
+    } catch { /* private mode */ }
   }, [dark]);
 
   if (!store.state.onboardingDone) return <Onboarding store={store} />;
