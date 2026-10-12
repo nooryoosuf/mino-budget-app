@@ -26,7 +26,7 @@ export default function Settings({ store }: { store: Store }) {
     const blob = new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'ruh-export.csv';
+    a.download = 'mino-export.csv';
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -112,7 +112,7 @@ export default function Settings({ store }: { store: Store }) {
           <Btn variant="soft" onClick={() => {
             const blob = new Blob([store.exportJson()], { type: 'application/json' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = 'ruh-backup.json'; a.click();
+            a.href = URL.createObjectURL(blob); a.download = 'mino-backup.json'; a.click();
             URL.revokeObjectURL(a.href);
           }}><Download size={15} /> Backup JSON</Btn>
           <Btn variant="soft" onClick={() => setShowLab(true)}><Sparkles size={15} /> Liquid Glass lab</Btn>

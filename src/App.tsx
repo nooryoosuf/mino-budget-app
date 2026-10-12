@@ -21,7 +21,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#08181c' : '#FAF7F1');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#080807' : '#F5F4F0');
   }, [dark]);
 
   if (!store.state.onboardingDone) return <Onboarding store={store} />;
@@ -59,11 +59,9 @@ function Onboarding({ store }: { store: ReturnType<typeof useStore> }) {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-5 py-10">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1c1500] text-[#FFD60A]">
-        <svg viewBox="0 0 32 32" className="h-6 w-6" fill="none"><path d="M5 20c2.5-1.2 3.5-5 6-5s2.5 3.5 5 3.5S18 14 20 12.5s4-1.5 4-1.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /><circle cx="23" cy="21" r="2.6" fill="#f59e0b" /></svg>
-      </div>
+      <img src={`${import.meta.env.BASE_URL}mino-icon.png`} alt="Mino" className="h-14 w-14 rounded-[18px]" />
       <h1 className="track-tighter mt-4 text-[38px] font-bold leading-[1.05]">Know your money, <span className="text-[var(--accent)]">until payday.</span></h1>
-      <p className="mt-2 text-[15px] text-[var(--muted)]">Ruh is a Maldives-first money companion — MVR budgets, salary-cycle safe-to-spend, Favara & family transfers, cash spending, and BML alert imports. Private by design: everything stays on this device.</p>
+      <p className="mt-2 text-[15px] text-[var(--muted)]">Mino is a Maldives-first money companion — MVR budgets, salary-cycle safe-to-spend, Favara & family transfers, cash spending, and BML alert imports. Private by design: everything stays on this device.</p>
       <div className="mt-6 space-y-3 rounded-[26px] bg-[var(--surface)] p-5">
         <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">What should we call you?
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Aisha" className={`${inputCls} mt-1`} />

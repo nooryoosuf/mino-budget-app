@@ -1,8 +1,8 @@
 {
-  "name": "ruh-mv-personal-finance",
+  "name": "mino-budget-app",
   "private": true,
   "version": "0.1.0",
-  "description": "Ruh — Maldives personal finance & budgeting companion (MVR-first, local-first prototype)",
+  "description": "Mino App — Maldives personal finance & budgeting companion (MVR-first, local-first prototype)",
   "type": "module",
   "scripts": {
     "dev": "vite",

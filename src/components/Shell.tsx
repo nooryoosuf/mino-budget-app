@@ -186,13 +186,12 @@ function TabBtn({ t, active, badge, onGo }: { t: { key: Tab; label: string; icon
 }
 
 function Brand() {
+  const base = import.meta.env.BASE_URL;
   return (
     <div className="flex items-center gap-2.5 px-1">
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--accent)] text-[#1c1500]">
-        <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none"><path d="M5 20c2.5-1.2 3.5-5 6-5s2.5 3.5 5 3.5S18 14 20 12.5s4-1.5 4-1.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /><circle cx="23" cy="21" r="2.6" fill="#141412" /></svg>
-      </div>
+      <img src={`${base}mino-circle.png`} alt="Mino" className="h-10 w-10 rounded-2xl" />
       <div>
-        <p className="track-tight text-[19px] font-bold leading-none">Ruh</p>
+        <p className="track-tight text-[19px] font-bold leading-none">Mino</p>
         <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--muted)]">Maldives money</p>
       </div>
     </div>

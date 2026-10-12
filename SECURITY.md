@@ -1,4 +1,4 @@
-# Security & Privacy — Ruh (local-first build)
+# Security & Privacy — Mino App (local-first build)
 
 ## Architecture summary
 

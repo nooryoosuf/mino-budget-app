@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(({ mode }) => ({
   // GitHub Pages serves project sites under /<repo>/ — the deploy workflow builds with --mode pages.
-  base: mode === 'pages' ? '/ruh-maldives-money/' : '/',
+  base: mode === 'pages' ? '/mino-budget-app/' : '/',
   plugins: [react(), tailwindcss()],
   build: {
     chunkSizeWarningLimit: 600,

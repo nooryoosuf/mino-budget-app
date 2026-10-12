@@ -1,4 +1,4 @@
-# Ruh · Maldives Money Companion
+# Mino App · Maldives Money
 
 A Maldives-first personal finance & budgeting app. MVR by default, salary-cycle
 safe-to-spend, Favara/family transfer handling, cash-spending honesty, BML SMS
