@@ -43,6 +43,21 @@ npm run preview  # serve the production build
 
 No credentials, no `.env` values, no external services required.
 
+## BML alerts (sender 455)
+
+A website cannot read your SMS inbox — no browser API exists for that, by
+design. Mino therefore offers two honest paths:
+
+1. **Share from your SMS app (recommended):** open the 455 message → Share →
+   Mino. The installed app opens straight into the import preview with the
+   text prefilled. Works because of the Web Share Target in the manifest.
+2. **Paste:** copy the 455 text into Import → Pasted SMS.
+
+Both flows run the versioned on-device parser with confidence scores and
+duplicate detection. The future full-auto path is a native wrapper using
+Android's SMS User Consent API filtered to sender 455 (Play-compliant,
+one-tap consent per message) — documented, not yet built.
+
 ## Ask Mino (personal treasurer)
 
 Tap the Mino mascot (bottom-right) or "Ask Mino" anywhere in the app. Mino

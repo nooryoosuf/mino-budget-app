@@ -10,10 +10,10 @@ import { Badge, Btn, inputCls } from './ui';
 
 type Step = 'choose' | 'preview' | 'done';
 
-export default function ImportWizard({ store, onDone }: { store: Store; onDone: () => void }) {
+export default function ImportWizard({ store, onDone, initialText = '' }: { store: Store; onDone: () => void; initialText?: string }) {
   const [step, setStep] = useState<Step>('choose');
   const [tab, setTab] = useState<'sms' | 'csv'>('sms');
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText);
   const [report, setReport] = useState<{ imported: number; skipped: number; notes: string[] }>({ imported: 0, skipped: 0, notes: [] });
 
   const smsDrafts = useMemo(() => {
@@ -98,7 +98,7 @@ export default function ImportWizard({ store, onDone }: { store: Store; onDone: 
       </div>
       {tab === 'sms' ? (
         <>
-          <p className="text-xs text-[var(--muted)]">Paste BML alert texts (one per line or blank-line separated). Parsed on-device; uncertain messages stay unchecked. <br />A normal website cannot read your SMS inbox automatically — paste is the honest path for now.</p>
+          <p className="text-xs text-[var(--muted)]">Paste the BML alert (sender <b>455</b>) exactly as it arrived — or Share it straight from your SMS app to Mino. Parsed on-device; uncertain messages stay unchecked. <br />Websites can't read your inbox automatically, so paste-or-share is the honest path for now.</p>
           <div className="flex flex-wrap gap-1.5">
             {SAMPLE_SMS.slice(0, 3).map((s, i) => (
               <button key={i} onClick={() => setText((t) => (t ? t + '\n' + s : s))} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--muted)] hover:bg-black/5">

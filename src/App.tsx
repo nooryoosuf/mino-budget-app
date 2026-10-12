@@ -4,6 +4,7 @@ import { ArrowRight, PiggyBank, Plus } from 'lucide-react';
 import Shell, { type Tab } from './components/Shell';
 import MinoChat from './components/mino/MinoChat';
 import { GlassDefs } from './components/glass/LiquidGlass';
+import { clearSharedParams, getSharedPayload } from './lib/share';
 import { Btn, inputCls } from './components/ui';
 import { parseMvrToLaari } from './lib/money';
 import { useStore } from './lib/store';
@@ -27,6 +28,13 @@ export default function App() {
   });
   const [mino, setMino] = useState({ open: false, prefill: '', key: 0 });
   const [activityNav, setActivityNav] = useState({ q: '', cat: 'all', key: 0 });
+  // SMS shared from the inbox via Android share sheet (?text=...) → import preview
+  const [importSeed] = useState(() => {
+    const p = getSharedPayload(window.location.search);
+    if (!p) return { text: '', key: 0 };
+    clearSharedParams();
+    return { text: p.text, key: Date.now() };
+  });
 
   const askMino = (prefill = '') => setMino((m) => ({ open: true, prefill, key: m.key + 1 }));
   const goTxns = (q = '', cat = 'all') => {
@@ -47,7 +55,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
     <GlassDefs />
-    <Shell store={store} tab={tab} setTab={setTab} dark={dark} setDark={setDark} onMino={askMino}>
+    <Shell store={store} tab={tab} setTab={setTab} dark={dark} setDark={setDark} onMino={askMino} importSeed={importSeed}>
       {(quick, ask) => (
       <Suspense fallback={<div className="space-y-3" aria-busy="true" aria-label="Loading section"><div className="h-40 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" /><div className="h-24 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" /></div>}>
       {tab === 'overview' && <Overview store={store} go={setTab} onQuick={quick} onAsk={ask} />}

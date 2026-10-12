@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeftRight, Bell, ChartColumn, House, Moon, Plus, Settings as Cog, Sun, Target, Upload, Wallet, X,
@@ -36,11 +36,16 @@ function greeting(): string {
   return 'Good evening';
 }
 
-export default function Shell({ store, tab, setTab, dark, setDark, onMino, children }: {
-  store: Store; tab: Tab; setTab: (t: Tab) => void; dark: boolean; setDark: (v: boolean) => void; onMino: (prefill?: string) => void; children: (quick: (k: QuickKind) => void, ask: (q: string) => void) => React.ReactNode;
+export default function Shell({ store, tab, setTab, dark, setDark, onMino, importSeed, children }: {
+  store: Store; tab: Tab; setTab: (t: Tab) => void; dark: boolean; setDark: (v: boolean) => void; onMino: (prefill?: string) => void; importSeed: { text: string; key: number }; children: (quick: (k: QuickKind) => void, ask: (q: string) => void) => React.ReactNode;
 }) {
   const [sheet, setSheet] = useState<null | 'add' | 'import'>(null);
   const [preset, setPreset] = useState<TxnType>('expense');
+
+  // deep-link: SMS shared from the inbox (or any seed) opens the import preview
+  useEffect(() => {
+    if (importSeed.key > 0) setSheet('import');
+  }, [importSeed.key]);
   const unreviewed = store.state.txns.filter((t) => !t.reviewed).length;
   const name = store.state.prefs.displayName.trim();
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -173,7 +178,7 @@ export default function Shell({ store, tab, setTab, dark, setDark, onMino, child
                 <h3 className="track-tight text-[20px] font-bold">{sheet === 'add' ? 'New transaction' : 'Import'}</h3>
                 <button onClick={() => setSheet(null)} className="press flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/10" aria-label="Close"><X size={17} /></button>
               </div>
-              {sheet === 'add' ? <QuickAdd key={preset} store={store} initialType={preset} onDone={() => setSheet(null)} /> : <ImportWizard store={store} onDone={() => setSheet(null)} />}
+              {sheet === 'add' ? <QuickAdd key={preset} store={store} initialType={preset} onDone={() => setSheet(null)} /> : <ImportWizard key={importSeed.key} store={store} initialText={importSeed.text} onDone={() => setSheet(null)} />}
             </motion.div>
           </motion.div>
         )}
