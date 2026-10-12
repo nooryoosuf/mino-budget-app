@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
       # Runners already ship an Android SDK — just accept licenses and make
       # sure API 36 + build-tools exist (setup-android@v3 is broken on new
       # runners: it demands the long-removed "tools" package).
