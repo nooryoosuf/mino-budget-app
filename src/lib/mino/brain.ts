@@ -21,9 +21,10 @@ import type { Intent } from './parse';
 import type { MinoAnswer } from './types';
 
 export const BRAIN_MODEL = 'gemini-2.0-flash';
-const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${BRAIN_MODEL}:generateContent`;
+const API = 'https://generativelanguage.googleapis.com/v1beta';
 const KEY_LS = 'mino-brain-key';
 const ON_LS = 'mino-brain-on';
+const MODEL_LS = 'mino-brain-model';
 
 export function getBrainKey(): string | null {
   try {
@@ -59,24 +60,72 @@ export function brainActive(): boolean {
   }
 }
 
-/** Validate a key with one tiny call — true only on a real model reply. */
-export async function pingBrain(key: string): Promise<boolean> {
+export function getBrainModel(): string {
+  try {
+    return localStorage.getItem(MODEL_LS) || BRAIN_MODEL;
+  } catch {
+    return BRAIN_MODEL;
+  }
+}
+
+const endpointFor = (model: string) => `${API}/models/${model}:generateContent`;
+
+/** Validate a key AND discover the best model — never spends generation quota. */
+export async function pingBrain(key: string): Promise<{ ok: boolean; error?: string; model?: string }> {
+  let res: Response;
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15000);
-    const res = await fetch(`${ENDPOINT}?key=${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: ctrl.signal,
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: ok' }] }] }),
-    });
+    res = await fetch(`${API}/models?key=${encodeURIComponent(key)}`, { signal: ctrl.signal });
     clearTimeout(timer);
-    if (!res.ok) return false;
-    const json = await res.json();
-    return Array.isArray(json?.candidates) && json.candidates.length > 0;
   } catch {
-    return false;
+    return { ok: false, error: 'Network problem — are you online? Try again.' };
   }
+  if (!res.ok) {
+    let hint = '';
+    try {
+      const j = await res.json();
+      hint = String(j?.error?.message ?? '');
+    } catch { /* ignore */ }
+    if (res.status === 400 || /API_KEY_INVALID|API key not valid/i.test(hint)) {
+      return { ok: false, error: 'That key looks invalid — copy the full key from AI Studio (starts with AIza, ~39 characters, no spaces).' };
+    }
+    if (res.status === 403 || /restricted|blocked|SERVICE_DISABLED/i.test(hint)) {
+      return { ok: false, error: 'Key is restricted — in AI Studio set this key\u2019s restrictions to "None", or add mino.nooryoosuf.com to its website list.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, error: 'Quota exhausted for now — free tier resets, try again later.' };
+    }
+    return { ok: false, error: hint ? `Google said: ${hint.slice(0, 140)}` : `Google refused (HTTP ${res.status}). Double-check the key.` };
+  }
+  let models: { name?: string; supportedGenerationMethods?: string[] }[] = [];
+  try {
+    models = (await res.json())?.models ?? [];
+  } catch {
+    return { ok: false, error: 'Confusing reply from Google — try again.' };
+  }
+  const pick = pickModel(models);
+  if (!pick) return { ok: false, error: 'Key works but no usable model found — try again later.' };
+  try {
+    localStorage.setItem(MODEL_LS, pick);
+  } catch { /* private mode */ }
+  return { ok: true, model: pick };
+}
+
+/** Pick the strongest stable flash model; pure and tested. */
+export function pickModel(models: { name?: string; supportedGenerationMethods?: string[] }[]): string | null {
+  const gen = models
+    .filter((m) => (m.supportedGenerationMethods ?? []).includes('generateContent'))
+    .map((m) => String(m.name ?? '').replace(/^models\//, ''))
+    .filter(Boolean);
+  if (!gen.length) return null;
+  const flashes = gen.filter((n) => /flash/i.test(n));
+  const pool0 = flashes.length ? flashes : gen;
+  const full = pool0.filter((n) => !/lite/i.test(n));
+  const pool1 = full.length ? full : pool0;
+  const stable = pool1.filter((n) => !/preview|exp|experimental|thinking/i.test(n));
+  const pool2 = stable.length ? stable : pool1;
+  return [...pool2].sort().reverse()[0] ?? null;
 }
 /** Minimal aggregates only — counts and monthly totals, never raw history. */
 export function buildBrainContext(s: StoreShape): Record<string, unknown> {
@@ -134,7 +183,7 @@ async function classify(key: string, question: string, s: StoreShape): Promise<F
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
-    const res = await fetch(`${ENDPOINT}?key=${encodeURIComponent(key)}`, {
+    const res = await fetch(`${endpointFor(getBrainModel())}?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: ctrl.signal,
@@ -148,7 +197,13 @@ async function classify(key: string, question: string, s: StoreShape): Promise<F
         }],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // model retired since discovery? forget it so the next test re-discovers
+      if (res.status === 404) {
+        try { localStorage.removeItem(MODEL_LS); } catch { /* ignore */ }
+      }
+      return null;
+    }
     const json = await res.json();
     const parts = json?.candidates?.[0]?.content?.parts ?? [];
     for (const p of parts) {

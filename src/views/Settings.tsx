@@ -169,9 +169,9 @@ function BrainSetup() {
     if (!k) return;
     setTesting(true);
     setMsg(null);
-    const ok = await pingBrain(k);
+    const r = await pingBrain(k);
     setTesting(false);
-    setMsg(ok ? 'Connected — Mino can use the AI brain now.' : 'That key didn\'t work — check it in Google AI Studio and try again.');
+    setMsg(r.ok ? `Connected — using ${r.model}. Mino can use the AI brain now.` : (r.error ?? 'Didn\'t connect — try again.'));
   };
 
   return (

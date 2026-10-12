@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { minoProvider } from './provider';
 import { parseIntent, extractMvr, cleanGoalName } from './parse';
 import { detectAnomalies } from './radar';
-import { buildBrainContext, mapFnCall } from './brain';
+import { buildBrainContext, mapFnCall, pickModel, pingBrain } from './brain';
 import { evaluatePurchase, outflowOf, proposeBudgetUpdate, savingsPlan, searchMerchant } from './tools';
 import type { StoreShape } from '../store';
 import type { Txn } from '../types';
@@ -147,5 +147,37 @@ describe('mino brain mapping', () => {
     const blob = JSON.stringify(ctx);
     expect(blob).not.toContain('STO MALE');
     expect(blob).not.toContain('MTCC FERRY');
+  });
+  it('picks the strongest stable flash model', () => {
+    const models = [
+      { name: 'models/gemini-2.0-flash', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/gemini-2.5-flash-lite', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/gemini-2.5-pro-preview', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/embedding-001', supportedGenerationMethods: ['embedContent'] },
+    ];
+    expect(pickModel(models)).toBe('gemini-2.5-flash');
+    expect(pickModel([])).toBeNull();
+  });
+  it('explains a bad key instead of a bare failure', async () => {
+    const stub = vi.fn(async () => ({
+      ok: false, status: 400,
+      json: async () => ({ error: { message: 'API_KEY_INVALID' } }),
+    }));
+    vi.stubGlobal('fetch', stub);
+    const r = await pingBrain('bogus');
+    vi.unstubAllGlobals();
+    expect(r.ok).toBe(false);
+    expect(r.error ?? '').toMatch(/invalid/i);
+  });
+  it('discovers and stores the model on success', async () => {
+    const stub = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }] }),
+    }));
+    vi.stubGlobal('fetch', stub);
+    const r = await pingBrain('good-key');
+    vi.unstubAllGlobals();
+    expect(r).toMatchObject({ ok: true, model: 'gemini-2.5-flash' });
   });
 });
