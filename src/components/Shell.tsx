@@ -126,7 +126,7 @@ export default function Shell({ store, tab, setTab, dark, setDark, children }: {
       {/* floating dock — Home sits in its own podium above the bar, never clipped */}
       <div className="fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden">
         <div className="relative mx-auto max-w-[400px]">
-          <div role="toolbar" aria-label="Primary mobile" className="flex h-[66px] items-center rounded-full bg-[var(--surface)] px-3">
+          <div role="toolbar" aria-label="Primary mobile" className="flex h-[66px] items-center rounded-full bg-[var(--surface)] px-3 shadow-[0_14px_34px_-14px_rgb(20_20_18/0.28)] dark:shadow-[0_18px_40px_-12px_rgb(0_0_0/0.65)]">
             <div className="flex min-w-0 flex-1 items-center">
               {LEFT.map((t) => <TabBtn key={t.key} t={t} active={tab === t.key} badge={t.key === 'txns' ? unreviewed : 0} onGo={() => setTab(t.key)} />)}
             </div>
@@ -136,7 +136,7 @@ export default function Shell({ store, tab, setTab, dark, setDark, children }: {
             </div>
           </div>
           <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[26px]">
-            <span className={`flex h-[72px] w-[72px] items-center justify-center rounded-full transition-colors ${tab === 'overview' ? 'bg-[var(--accent-soft)]' : 'bg-[var(--surface)]'}`}>
+            <span className={`flex h-[72px] w-[72px] items-center justify-center rounded-full shadow-[0_10px_24px_-10px_rgb(20_20_18/0.25)] transition-colors dark:shadow-[0_12px_26px_-10px_rgb(0_0_0/0.6)] ${tab === 'overview' ? 'bg-[var(--accent-soft)]' : 'bg-[var(--surface)]'}`}>
               <button
                 onClick={() => setTab('overview')}
                 aria-label="Home" aria-current={tab === 'overview' ? 'page' : undefined}
