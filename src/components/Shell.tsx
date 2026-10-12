@@ -201,7 +201,7 @@ function Brand() {
       <img src={`${base}mino-circle.png`} alt="Mino" className="h-10 w-10 rounded-2xl" />
       <div>
         <p className="track-tight text-[19px] font-bold leading-none">Mino</p>
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--muted)]">Maldives money</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--muted)]">Budgeting companion</p>
       </div>
     </div>
   );
