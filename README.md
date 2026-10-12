@@ -69,6 +69,16 @@ you confirm. Unknown questions and thin data get honest fallbacks, never
 invented figures. `src/lib/mino/provider.ts` is the seam where a future
 server-side LLM could plug in (tool-calling only; maths stay in app code).
 
+### Optional AI brain (free, off by default)
+
+Mino understands common phrasing fully offline. For trickier wording, add a
+free Google AI Studio key in Settings → "Mino's AI brain". The model acts
+**only as an intent router**: it sees your question plus monthly aggregates
+and must return one structured `finance_intent` call — all money maths and
+replies still run in local code. No raw transactions, SMS text, or history
+ever leave the device. Any failure (offline, bad key, quota) silently falls
+back to the offline engine. Remove the key anytime to go offline-only.
+
 ## Using the app (main journey)
 
 1. Onboarding: name → trusted opening balance → payday → start fresh or load demo.

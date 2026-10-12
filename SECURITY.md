@@ -1,5 +1,21 @@
 # Security & Privacy — Mino App (local-first build)
 
+## Optional AI brain (Gemini free tier)
+
+- Off by default; enabled only with a user-supplied key stored in
+  `localStorage` (`mino-brain-key`). A key in browser storage is readable by
+  any script running on the page — we run zero third-party scripts, but treat
+  free-tier keys as low-value and revocable.
+- Per question, the app sends: the question text + monthly aggregates
+  (income/expense totals, counts, budget limits, goal targets, upcoming
+  bills). **Never sent:** raw transactions, merchants beyond top-level
+  aggregates, SMS text, full history.
+- The model is constrained to one `finance_intent` function call; it cannot
+  read or write data directly. Validate mapping in `mapFnCall` (unknown
+  categories/amounts → `unknown` intent → honest fallback).
+- Revocation = Remove in Settings (deletes the key) or revoke in AI Studio.
+- Google's data handling applies to sent prompts — linked from Settings.
+
 ## Architecture summary
 
 Single-page app, no server, no analytics, no third-party scripts beyond Google

@@ -6,6 +6,7 @@ import Dropdown from '../components/Dropdown';
 import { COLOR_CHOICES, ICON_CHOICES, allCategories } from '../lib/categories';
 import { icons } from 'lucide-react';
 import GlassDemo from '../components/glass/GlassDemo';
+import { brainActive, getBrainKey, pingBrain, setBrainKey, setBrainOn } from '../lib/mino/brain';
 import { parseMvrToLaari, uid } from '../lib/money';
 import type { Store } from '../lib/store';
 import { Btn, Card, Field, SectionTitle, cx, inputCls } from '../components/ui';
@@ -53,8 +54,12 @@ export default function Settings({ store }: { store: Store }) {
       </Card>
 
       <Card className="p-5">
+        <SectionTitle kicker="Optional · free" title="Mino's AI brain" />
+        <BrainSetup />
+      </Card>
+
+      <Card className="p-5">
         <SectionTitle kicker="Personalize" title="Your categories" />
-        <p className="mb-3 text-xs leading-relaxed text-[var(--muted)]">Create envelopes that match your life — island trips, gym, kids. Pick an icon and color; budgets and reports pick them up instantly.</p>
         <AddCategory store={store} />
         {state.customCats.length > 0 && (
           <ul className="mt-3 space-y-2">
@@ -140,6 +145,70 @@ export default function Settings({ store }: { store: Store }) {
       <AnimatePresence>
         {showLab && <GlassDemo onClose={() => setShowLab(false)} />}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function BrainSetup() {
+  const [key, setKey] = useState(getBrainKey() ?? '');
+  const [on, setOn] = useState(brainActive());
+  const [testing, setTesting] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const saved = !!getBrainKey();
+
+  const save = () => {
+    const k = key.trim();
+    if (!k) return;
+    setBrainKey(k);
+    setBrainOn(true);
+    setOn(true);
+    setMsg('Key saved on this device. Test the connection below.');
+  };
+  const test = async () => {
+    const k = key.trim() || getBrainKey() || '';
+    if (!k) return;
+    setTesting(true);
+    setMsg(null);
+    const ok = await pingBrain(k);
+    setTesting(false);
+    setMsg(ok ? 'Connected — Mino can use the AI brain now.' : 'That key didn\'t work — check it in Google AI Studio and try again.');
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs leading-relaxed text-[var(--muted)]">
+        Mino works fully offline. Add a <b>free Google AI Studio key</b> and he'll also
+        understand trickier phrasing. What's sent per question: your words plus monthly
+        totals and counts — <b>never</b> raw transactions, SMS text, or your full history.
+        The key stays on this device; remove it anytime to go offline-only.
+      </p>
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer"
+        className="press inline-flex h-10 items-center rounded-full bg-[var(--surface-2)] px-4 text-sm font-bold">
+        Get a free key ↗
+      </a>
+      <div className="flex gap-2">
+        <input
+          type="password" value={key} onChange={(e) => setKey(e.target.value)}
+          placeholder="Paste AI Studio key" aria-label="Gemini API key"
+          className={`${inputCls} font-mono`} autoComplete="off" spellCheck={false}
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Btn variant="soft" onClick={save}>Save key</Btn>
+        <Btn variant="ghost" onClick={test}> {testing ? 'Testing…' : 'Test connection'}</Btn>
+        {saved && (
+          <Btn variant="ghost" onClick={() => { setBrainKey(null); setKey(''); setOn(false); setMsg('Key removed — Mino is offline-only again.'); }}>
+            Remove
+          </Btn>
+        )}
+      </div>
+      {saved && (
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={on} onChange={(e) => { setBrainOn(e.target.checked); setOn(e.target.checked); }} className="h-4 w-4 accent-[var(--accent)]" />
+          AI brain {on ? 'on' : 'paused'}
+        </label>
+      )}
+      {msg && <p className="text-[13px] font-medium" role="status">{msg}</p>}
     </div>
   );
 }

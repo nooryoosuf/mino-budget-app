@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { minoProvider } from './provider';
 import { parseIntent, extractMvr, cleanGoalName } from './parse';
 import { detectAnomalies } from './radar';
+import { buildBrainContext, mapFnCall } from './brain';
 import { evaluatePurchase, outflowOf, proposeBudgetUpdate, savingsPlan, searchMerchant } from './tools';
 import type { StoreShape } from '../store';
 import type { Txn } from '../types';
@@ -124,5 +125,27 @@ describe('mino tools never invent', () => {
   it('answers the watchdog question', async () => {
     const a = await minoProvider.answer('Anything unusual lately?', s);
     expect(a.text.length).toBeGreaterThan(20);
+  });
+});
+
+describe('mino brain mapping', () => {
+  const s = state();
+  it('maps function calls to intents with laari conversion', () => {
+    expect(mapFnCall({ name: 'finance_intent', args: { kind: 'afford', amountMvr: 8000, item: 'phone' } }, s))
+      .toMatchObject({ kind: 'afford', amountLaari: 800000 });
+    expect(mapFnCall({ name: 'finance_intent', args: { kind: 'budget-set', category: 'food', amountMvr: 2000 } }, s))
+      .toMatchObject({ kind: 'budget-set', amountLaari: 200000 });
+  });
+  it('rejects unknown categories and bad amounts', () => {
+    expect(mapFnCall({ name: 'finance_intent', args: { kind: 'spend-category', category: 'nope' } }, s).kind).toBe('unknown');
+    expect(mapFnCall({ name: 'finance_intent', args: { kind: 'afford', amountMvr: -5 } }, s).kind).toBe('unknown');
+    expect(mapFnCall({ name: 'other', args: {} }, s).kind).toBe('unknown');
+  });
+  it('brain context contains aggregates, never raw transactions', () => {
+    const ctx = buildBrainContext(s);
+    expect(ctx).toMatchObject({ monthIncomeMvr: 18500 });
+    const blob = JSON.stringify(ctx);
+    expect(blob).not.toContain('STO MALE');
+    expect(blob).not.toContain('MTCC FERRY');
   });
 });

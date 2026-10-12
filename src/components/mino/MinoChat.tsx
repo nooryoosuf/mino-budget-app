@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUp, Search, X } from 'lucide-react';
-import { minoProvider } from '../../lib/mino/provider';
+import { brainActive, getProvider } from '../../lib/mino/brain';
 import { extractMonths, extractMvr, parseIntent } from '../../lib/mino/parse';
 import { fmt, proposeGoal } from '../../lib/mino/tools';
 import type { InspectRef, MinoAnswer, Proposal } from '../../lib/mino/types';
@@ -80,7 +80,7 @@ export default function MinoChat({ store, prefill, prefillKey, onClose, onInspec
     setThinking(true);
     setMood('thinking');
     try {
-      const a = await minoProvider.answer(q, store.state);
+      const a = await getProvider().answer(q, store.state);
       setMood(a.mood);
       if (a.clarify) setPending({ name: a.clarify.draft.name, months: a.clarify.draft.months });
       setMsgs((m) => [...m, { id: uid(), role: 'mino', text: a.text, mood: a.mood, proposal: a.proposal, inspect: a.inspect, followUps: a.followUps }]);
@@ -100,7 +100,7 @@ export default function MinoChat({ store, prefill, prefillKey, onClose, onInspec
     setMsgs([{
       id: uid(), role: 'mino', mood: 'happy',
       text: `Hey${name ? ` ${name}` : ''}! I'm Mino — I read your actual records and do the maths myself, never guess. What should we look at?`,
-      followUps: minoProvider.suggestions(store.state).slice(0, 3),
+      followUps: getProvider().suggestions(store.state).slice(0, 3),
     }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -165,7 +165,7 @@ export default function MinoChat({ store, prefill, prefillKey, onClose, onInspec
         <div className="min-w-0 flex-1">
           <p className="track-tight text-[17px] font-bold leading-tight">Mino</p>
           <p className="text-[12px] font-medium text-[var(--muted)]">
-            {thinking ? 'Looking at your records…' : 'Personal treasurer · works offline'}
+            {thinking ? 'Looking at your records…' : brainActive() ? 'AI brain · online' : 'Personal treasurer · works offline'}
           </p>
         </div>
         <button onClick={onClose} aria-label="Close chat" className="press flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)]">
