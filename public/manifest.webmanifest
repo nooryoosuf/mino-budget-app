@@ -1,0 +1,16 @@
+{
+  "name": "Mino App — Your Budgeting Companion",
+  "short_name": "Mino",
+  "description": "Maldives-first money companion: MVR budgets, safe-to-spend, savings goals and Mino the treasurer.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F4F0",
+  "theme_color": "#F5F4F0",
+  "icons": [
+    { "src": "icons/mino-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/mino-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/mino-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

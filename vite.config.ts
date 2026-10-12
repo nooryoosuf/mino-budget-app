@@ -2,9 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig(({ mode }) => ({
-  // GitHub Pages serves project sites under /<repo>/ — the deploy workflow builds with --mode pages.
-  base: mode === 'pages' ? '/mino-budget-app/' : '/',
+export default defineConfig({
+  // Custom domain (mino.nooryoosuf.com) serves from root. No subpath base.
   plugins: [react(), tailwindcss()],
   build: {
     chunkSizeWarningLimit: 600,
@@ -18,4 +17,4 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-}));
+});
