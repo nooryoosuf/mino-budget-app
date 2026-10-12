@@ -54,9 +54,14 @@ design. Mino therefore offers two honest paths:
 2. **Paste:** copy the 455 text into Import → Pasted SMS.
 
 Both flows run the versioned on-device parser with confidence scores and
-duplicate detection. The future full-auto path is a native wrapper using
-Android's SMS User Consent API filtered to sender 455 (Play-compliant,
-one-tap consent per message) — documented, not yet built.
+duplicate detection.
+
+3. **Android app (full-auto):** the Capacitor build (`android/`, custom
+   `SmsConsentPlugin`) watches sender 455 through Android's SMS User Consent
+   API — one tap per alert, no SMS permission, Play-policy safe. Enable it in
+   Settings → "Auto-read 455 alerts". Debug APKs are built free in CI
+   (Actions → "Android APK (debug)" → Run workflow → download `mino-debug-apk`).
+   Sideload to test; Play release ($25) comes later if wanted.
 
 ## Ask Mino (personal treasurer)
 

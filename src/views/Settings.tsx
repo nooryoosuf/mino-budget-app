@@ -6,12 +6,13 @@ import Dropdown from '../components/Dropdown';
 import { COLOR_CHOICES, ICON_CHOICES, allCategories } from '../lib/categories';
 import { icons } from 'lucide-react';
 import GlassDemo from '../components/glass/GlassDemo';
+import { SMS_SENDER, type SmsAuto } from '../lib/smsAuto';
 import { brainActive, getBrainKey, pingBrain, setBrainKey, setBrainOn } from '../lib/mino/brain';
 import { parseMvrToLaari, uid } from '../lib/money';
 import type { Store } from '../lib/store';
 import { Btn, Card, Field, SectionTitle, cx, inputCls } from '../components/ui';
 
-export default function Settings({ store }: { store: Store }) {
+export default function Settings({ store, sms }: { store: Store; sms: SmsAuto }) {
   const { state } = store;
   const [ruleMatch, setRuleMatch] = useState('');
   const [ruleCat, setRuleCat] = useState('groceries');
@@ -51,6 +52,11 @@ export default function Settings({ store }: { store: Store }) {
             </div>
           </Field>
         </div>
+      </Card>
+
+      <Card className="p-5">
+        <SectionTitle kicker="Android app" title={`Auto-read ${SMS_SENDER} alerts`} />
+        <SmsAutoCard sms={sms} />
       </Card>
 
       <Card className="p-5">
@@ -145,6 +151,32 @@ export default function Settings({ store }: { store: Store }) {
       <AnimatePresence>
         {showLab && <GlassDemo onClose={() => setShowLab(false)} />}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function SmsAutoCard({ sms }: { sms: SmsAuto }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs leading-relaxed text-[var(--muted)]">
+        {sms.supported
+          ? `When a ${SMS_SENDER} alert arrives, Android asks for one tap — then Mino parses, dedupes and files it. No SMS permission, no background reading; each message needs your tap.`
+          : `This switch lives in the Android app (you're on web right now). The simulate button below tests the exact same pipeline anywhere.`}
+      </p>
+      {sms.supported && (
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" checked={sms.enabled} onChange={(e) => sms.setEnabled(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
+          Watch {SMS_SENDER} messages
+        </label>
+      )}
+      <div>
+        <Btn variant="soft" onClick={sms.simulate}>Simulate a {SMS_SENDER} message</Btn>
+      </div>
+      {sms.last && (
+        <p className="rounded-2xl bg-black/[0.04] px-3.5 py-2.5 text-[13px] font-medium dark:bg-white/[0.06]" role="status">
+          {sms.last.status === 'imported' ? '✓ ' : sms.last.status === 'duplicate' ? '○ ' : '! '}{sms.last.detail}
+        </p>
+      )}
     </div>
   );
 }

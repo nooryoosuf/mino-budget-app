@@ -6,6 +6,7 @@ import Shell, { type Tab } from './components/Shell';
 import MinoChat from './components/mino/MinoChat';
 import { GlassDefs } from './components/glass/LiquidGlass';
 import { clearSharedParams, getSharedPayload } from './lib/share';
+import { useSmsAuto } from './lib/smsAuto';
 import { Btn, inputCls } from './components/ui';
 import { parseMvrToLaari } from './lib/money';
 import { useStore } from './lib/store';
@@ -56,6 +57,7 @@ export default function App() {
   });
   const [mino, setMino] = useState({ open: false, prefill: '', key: 0 });
   const [activityNav, setActivityNav] = useState({ q: '', cat: 'all', key: 0 });
+  const sms = useSmsAuto(store);
   // SMS shared from the inbox via Android share sheet (?text=...) → import preview
   const [importSeed] = useState(() => {
     const p = getSharedPayload(window.location.search);
@@ -92,7 +94,7 @@ export default function App() {
       {tab === 'budgets' && <Budgets store={store} onAsk={ask} />}
       {tab === 'insights' && <InsightsView store={store} onAsk={ask} goTxns={(c) => goTxns('', c ?? '')} />}
       {tab === 'goals' && <Goals store={store} onAsk={ask} />}
-      {tab === 'settings' && <Settings store={store} />}
+      {tab === 'settings' && <Settings store={store} sms={sms} />}
       </Suspense>
       </SectionError>
       )}

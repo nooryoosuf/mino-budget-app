@@ -1,0 +1,30 @@
+name: Android APK (debug)
+
+# Manual build: Actions tab → "Android APK (debug)" → Run workflow.
+# Produces an installable debug APK (sideload-ready, free) with the
+# 455 SMS-consent watcher baked in. No Play account needed.
+on:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - run: npx cap sync android
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mino-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
