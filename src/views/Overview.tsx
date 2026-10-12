@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowDownRight, ArrowLeftRight, ArrowUpRight, CalendarClock, ChevronRight,
-  PiggyBank, Sparkles, TriangleAlert, Upload,
+  PiggyBank, Radar, Sparkles, TriangleAlert, Upload,
 } from 'lucide-react';
+import { detectAnomalies } from '../lib/mino/radar';
 import { CatIcon } from '../components/CatIcon';
 import { GlassButton } from '../components/glass/LiquidGlass';
 import { categoryLabel } from '../lib/categories';
@@ -222,6 +223,16 @@ export default function Overview({ store, go, onQuick, onAsk }: {
               <TriangleAlert size={17} className="shrink-0 text-red-500" />
               <span className="text-[13.5px] font-bold">Over budget: {b.name}</span>
               <ChevronRight size={16} className="ml-auto shrink-0 opacity-60" />
+            </button>
+          ))}
+          {detectAnomalies(state).slice(0, 2).map((f) => (
+            <button key={f.id} onClick={() => go('txns')} className="press flex w-full items-center gap-2.5 rounded-[20px] bg-orange-500/10 px-4 py-3 text-left">
+              <Radar size={17} className={`shrink-0 ${f.severity === 'bad' ? 'text-red-500' : 'text-orange-500'}`} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13.5px] font-bold">{f.title}</span>
+                <span className="block truncate text-[12px] font-medium text-[var(--muted)]">{f.detail}</span>
+              </span>
+              <ChevronRight size={16} className="shrink-0 opacity-60" />
             </button>
           ))}
         </section>

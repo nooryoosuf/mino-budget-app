@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { minoProvider } from './provider';
 import { parseIntent, extractMvr, cleanGoalName } from './parse';
+import { detectAnomalies } from './radar';
 import { evaluatePurchase, outflowOf, proposeBudgetUpdate, savingsPlan, searchMerchant } from './tools';
 import type { StoreShape } from '../store';
 import type { Txn } from '../types';
@@ -94,5 +95,34 @@ describe('mino tools never invent', () => {
     const a = await minoProvider.answer('What is my most common expense?', s);
     expect(a.text).toMatch(/STO MALE|shows up/i);
     expect(a.text).toMatch(/2 times|shows up/);
+  });
+  it('flags possible duplicates close together', () => {
+    const dup = {
+      ...s,
+      txns: [
+        ...s.txns,
+        mk({ date: '2026-10-02', type: 'expense', amountLaari: 125000, merchant: 'STO MALE', category: 'groceries' }),
+      ],
+    };
+    const flags = detectAnomalies(dup, new Date('2026-10-12T00:00:00'));
+    expect(flags.some((f) => f.id.startsWith('dup-'))).toBe(true);
+  });
+  it('flags a spike against the category median', () => {
+    const many = [5, 6, 7, 8, 9, 10].map((d) =>
+      mk({ date: `2026-09-${d}`, type: 'expense', amountLaari: 20000, merchant: 'CORNER SHOP', category: 'groceries' }),
+    );
+    const spiky = {
+      ...s,
+      txns: [...s.txns, ...many, mk({ date: '2026-10-10', type: 'expense', amountLaari: 500000, merchant: 'BULK BUY', category: 'groceries' })],
+    };
+    const flags = detectAnomalies(spiky, new Date('2026-10-12T00:00:00'));
+    expect(flags.some((f) => f.id.startsWith('spike-'))).toBe(true);
+  });
+  it('stays quiet with thin history', () => {
+    expect(detectAnomalies({ ...s, txns: [] })).toEqual([]);
+  });
+  it('answers the watchdog question', async () => {
+    const a = await minoProvider.answer('Anything unusual lately?', s);
+    expect(a.text.length).toBeGreaterThan(20);
   });
 });

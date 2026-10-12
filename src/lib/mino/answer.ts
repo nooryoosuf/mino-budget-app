@@ -10,6 +10,7 @@ import {
   outflowOf, proposeBudgetUpdate, proposeGoal, safePosition, savingsPlan,
   searchMerchant, spendingByCategory, summarizeMonth, summarizeWeek,
 } from './tools';
+import { detectAnomalies } from './radar';
 import type { Intent } from './parse';
 import type { MinoAnswer } from './types';
 import type { StoreShape } from '../store';
@@ -18,6 +19,7 @@ const thin = (s: StoreShape) => s.txns.length < 3;
 
 export function suggestionsFor(s: StoreShape): string[] {
   const out = ['Where did my money go?', 'Plan my money until payday'];
+  if (s.txns.length >= 8) out.push('Anything unusual lately?');
   if (s.txns.length > 0) out.push('Show my biggest expenses');
   if (s.budgets.length > 0) out.push('Which budgets are over?');
   else out.push('Set my food budget to MVR 2,000');
@@ -142,6 +144,26 @@ export function respond(raw: string, intent: Intent, s: StoreShape): MinoAnswer 
         mood: 'idle',
         text: `${cur.label} so far: ${fmt(cur.expense)}. Last month: ${fmt(prev.expense)}. That's ${Math.abs(deltaPct ?? 0)}% ${dir} — income was ${fmt(cur.income)} vs ${fmt(prev.income)}.`,
         followUps: ['Show my biggest expenses', 'Where did my money go?'],
+      };
+    }
+
+    case 'radar': {
+      const flags = detectAnomalies(s);
+      if (flags.length === 0) {
+        return {
+          mood: 'happy',
+          text: s.txns.length < 4
+            ? `Too little history for a proper scan — log a few more weeks and I'll watch for duplicates and spikes.`
+            : `All clear — no duplicates, spikes or outsized outflows in your recent records.`,
+          followUps: ['Show my biggest expenses', 'Where did my money go?'],
+        };
+      }
+      const top = flags[0];
+      return {
+        mood: top.severity === 'bad' ? 'warning' : 'warning',
+        text: `${flags.length} thing${flags.length === 1 ? '' : 's'} worth a look: ${flags.map((f) => `${f.title} — ${f.detail}`).join(' ')}`,
+        followUps: ['Show my biggest expenses', 'Where did my money go?'],
+        inspect: top.merchant ? { label: 'Inspect flagged transactions', q: top.merchant } : { label: 'Review in Activity', q: '' },
       };
     }
 

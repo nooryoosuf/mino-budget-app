@@ -27,6 +27,7 @@ export type Intent =
   | { kind: 'goal-plan'; targetLaari: number; months: number | null }
   | { kind: 'goal-create'; name: string; targetLaari: number | null; months: number | null }
   | { kind: 'frequent' }
+  | { kind: 'radar' }
   | { kind: 'budget-set'; category: string; raw: string; amountLaari: number }
   | { kind: 'budget-change'; category: string; raw: string; deltaLaari: number }
   | { kind: 'bulk-file'; category: string; raw: string }
@@ -134,7 +135,8 @@ export function parseIntent(raw: string, s: StoreShape): Intent {
     }
   }
 
-  // most common / frequent spending
+  // watchdog — unusual / duplicate / suspicious spending
+  if (/unusual|weird|suspicious|duplicate|fraud|abnormal|out of the ordinary|anything wrong|shady|double charg|check.*spending/.test(t)) return { kind: 'radar' };
   if (/most (common|frequent)|most often|repeat|regularly|keeps? showing up|where.*most/.test(t)) return { kind: 'frequent' };
 
   // comparisons
